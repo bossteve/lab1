@@ -150,7 +150,7 @@
     },   
     "AutoShutdownEnabled": {
       "type": "string",
-      "defaultValue": "No",
+      "defaultValue": "Yes",
       "allowedValues": [
         "Yes",
         "No"
@@ -161,21 +161,21 @@
     },    
     "AutoShutdownTime": {
       "type": "string",
-      "defaultValue": "2000",
+      "defaultValue": "2300",
       "metadata": {
           "description": "24-Hour Clock Time for Auto-Shutdown Example: 1900 = 7PM"
       }
     },                                
     "AutoShutdownEmail": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "steve@bostedor.com",
       "metadata": {
           "description": "Auto-Shutdown notification Email Example:  user@domain.com"
       }
     },                                               
     "ExchangeOrgName": {
       "type": "string",
-      "defaultValue": "49ers",
+      "defaultValue": "wingtip",
       "metadata": {
         "description": "Enter an Exchange Organization Name"
       }
@@ -189,6 +189,7 @@
     },
     "adminUsername": {
         "type": "string",
+        "defaultValue": "azureadmin",
         "metadata": {
             "description": "The name of the Administrator of the new VM and Domain"
         }
@@ -201,14 +202,14 @@
     }, 
     "ToEmail": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "steve@bostedor.com",
       "metadata": {
         "description": "Enter Email Address to send completed status"
       }
     },     
     "WindowsServerLicenseType": {
       "type": "string",
-      "defaultValue": "None",
+      "defaultValue": "Windows_Server",
       "allowedValues": [
         "None",
         "Windows_Server"
@@ -219,7 +220,7 @@
     },    
     "WindowsClientLicenseType": {
       "type": "string",
-      "defaultValue": "None",
+      "defaultValue": "Windows_Client",
       "allowedValues": [
         "None",
         "Windows_Client"
@@ -230,7 +231,7 @@
     },           
     "NamingConvention": {
       "type": "string",
-      "defaultValue": "khl",
+      "defaultValue": "wtt",
       "maxLength": 4,      
       "metadata": {
         "description": "Environment Naming Convention"
@@ -252,7 +253,7 @@
     },     
     "NetBiosDomain": {
       "type": "string",
-      "defaultValue": "killerhomelab",
+      "defaultValue": "wingtip",
       "maxLength": 15,      
       "metadata": {
           "description": "NetBios Domain Name"
@@ -260,14 +261,14 @@
     },   
     "InternalDomain": {
       "type": "string",
-      "defaultValue": "killerhomelab",
+      "defaultValue": "wingtip",
       "metadata": {
           "description": "NetBios Domain Name"
       }
     },      
     "InternalTLD": {
       "type": "string",
-      "defaultValue": "com",
+      "defaultValue": "toys",
       "allowedValues": [
         "com",
         "net",
@@ -287,14 +288,14 @@
     },    
     "ExternalDomain": {
       "type": "string",
-      "defaultValue": "killerhomelab",
+      "defaultValue": "wingtip",
       "metadata": {
           "description": "External DNS Domain"
       }
     },    
     "ExternalTLD": {
       "type": "string",
-      "defaultValue": "com",
+      "defaultValue": "toys",
       "allowedValues": [
         "com",
         "net",
@@ -313,14 +314,14 @@
     },                                                  
     "vnet1ID": {
       "type": "string",
-      "defaultValue": "10.1",
+      "defaultValue": "10.10",
       "metadata": {
         "description": "VNet1 Prefix"
       }
     },    
     "ReverseLookup1": {
       "type": "string",
-      "defaultValue": "1.10",
+      "defaultValue": "10.10",
       "metadata": {
           "description": "DNS Reverse Lookup Zone1 Prefix"
       }
