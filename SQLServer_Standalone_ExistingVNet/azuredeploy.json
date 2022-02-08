@@ -1,0 +1,189 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ExistingVNetName": {
+        "type": "string",
+        "metadata": {
+            "description": "Complete Name of existing VNet"
+        }
+    },
+    "ExistingSubnetName": {
+        "type": "string",
+        "metadata": {
+            "description": "Complete Name of existing Subnet"
+        }
+    },    
+    "SQLServerIP": {
+        "type": "string",
+        "metadata": {
+            "description": "SQL Server IP Address"
+        }
+    },   
+    "SQLServerName": {
+        "type": "string",
+        "metadata": {
+            "description": "SQL Server Name"
+        }
+    },        
+    "adminUsername": {
+        "type": "string",
+        "metadata": {
+            "description": "The name of the Administrator of the new VM and Domain"
+        }
+    },
+    "adminPassword": {
+        "type": "securestring",
+      "metadata": {
+        "description": "The password for the Administrator account of the new VM and Domain"
+      }
+    },
+    "WindowsServerLicenseType": {
+      "type": "string",
+      "defaultValue": "None",
+      "allowedValues": [
+        "None",
+        "Windows_Server"
+      ],      
+      "metadata": {
+          "description": "Windows Server OS License Type"
+      }
+    },     
+    "SQLSASUrl": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Enter a valid URL that points to the SQL 2019, 2017 or 2016 .ISO"
+      }
+    },
+    "SQLOSVersion": {
+        "type": "string",
+        "defaultValue": "2019-Datacenter",
+        "allowedValues": [
+          "2019-Datacenter",
+          "2016-Datacenter"
+        ],            
+        "metadata": {
+            "description": "SQL OS Version"
+        }
+    },
+    "SQLVMSize": {
+        "type": "string",
+        "defaultValue": "Standard_D8s_v3",
+        "metadata": {
+            "description": "SQL VMSize"
+        }
+    },        
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+          "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+      },
+      "defaultValue": "[deployment().properties.templateLink.uri]"
+    },
+    "_artifactsLocationSasToken": {
+        "type": "securestring",
+        "metadata": {
+            "description": "Auto-generated token to access _artifactsLocation. Leave it blank unless you need to provide your own value."
+        },
+        "defaultValue": ""
+    }    
+  },
+
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "deploySQLVM",
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/1nic-3disk-vm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[parameters('SQLServerName')]"
+              },
+              "computerIP": {
+                  "value": "[parameters('SQLServerIP')]"
+              },
+              "Publisher": {
+                  "value": "MicrosoftWindowsServer"
+              },
+              "Offer": {
+                  "value": "WindowsServer"
+              },
+              "OSVersion": {
+                "value": "[parameters('SQLOSVersion')]"
+              },              
+              "LicenseType": {
+                "value": "[parameters('WindowsServerLicenseType')]"
+              },   
+              "DataDisk1Name": {
+                "value": "SQLDatabases"
+              },            
+              "DataDisk2Name": {
+                "value": "SQLLogs"
+              },                       
+              "VMSize": {
+                "value": "[parameters('SQLVMSize')]"
+              },
+              "vnetName": {
+                "value": "[parameters('ExistingVNetName')]"
+              },            
+              "subnetName": {
+                "value": "[parameters('ExistingSubnetName')]"
+              },            
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },                                                                                                                                        
+              "location": {
+                  "value": "[resourceGroup().location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "InstallSQL",
+      "dependsOn": [
+        "deploySQLVM"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/sql.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[parameters('SQLServerName')]"
+              },
+              "SQLSASUrl": {
+                  "value": "[parameters('SQLSASUrl')]"
+              },                            
+              "location": {
+                  "value": "[resourceGroup().location]"
+              },                                          
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },
+              "_artifactsLocation": {
+                "value": "[parameters('_artifactsLocation')]"
+              },                                                                                                            
+              "_artifactsLocationSasToken": {
+                "value": "[parameters('_artifactsLocationSasToken')]"
+              }                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+          }
+      }
+    } 
+  ]
+}

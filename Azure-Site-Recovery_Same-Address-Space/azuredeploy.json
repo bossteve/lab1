@@ -1,0 +1,914 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptiondeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Location2": {
+      "type": "string",
+      "defaultValue": "WestUS",
+      "metadata": {
+        "description": "Choose Region (Example: WestUS)"
+      }
+    },   
+    "Site1RG": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Site1 Resource Groups"
+      }
+    },            
+    "Site2RG": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Site2 Resource Groups"
+      }
+    },                
+    "AdminObjectID": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+          "description": "Enter the Object ID of your Azure Admin Account that needs access to your Key Vaults"
+      }
+    },                                        
+    "adminUsername": {
+        "type": "string",
+        "metadata": {
+            "description": "The name of the Administrator of the new VM and Domain"
+        }
+    },
+    "adminPassword": {
+        "type": "securestring",
+      "metadata": {
+        "description": "The password for the Administrator account of the new VM and Domain"
+      }
+    },   
+    "WindowsServerLicenseType": {
+      "type": "string",
+      "defaultValue": "None",
+      "allowedValues": [
+        "None",
+        "Windows_Server"
+      ],      
+      "metadata": {
+          "description": "Windows Server OS License Type"
+      }
+    },        
+    "NamingConvention": {
+      "type": "string",
+      "defaultValue": "khl",
+      "maxLength": 4,      
+      "metadata": {
+        "description": "Environment Naming Convention"
+      }
+    },                         
+    "vnet1ID": {
+      "type": "string",
+      "defaultValue": "10.1",
+      "metadata": {
+        "description": "VNet1 Prefix"
+      }
+    },        
+    "SRV1OSVersion": {
+      "type": "string",
+      "defaultValue": "2022-Datacenter",
+      "allowedValues": [
+        "2022-Datacenter",
+        "2019-Datacenter",
+        "2016-Datacenter"
+      ],
+      "metadata": {
+          "description": "Server1 OS Version"
+      }
+    },    
+    "SRV1VMSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+          "description": "Server1 VMSize"
+      }
+    },              
+    "KeyVaultUniqueID": {
+        "type": "string",
+        "defaultValue": "1234567890x1",
+        "metadata": {
+            "description": "KeyVault 1 Unique Identifier"
+        }
+    },                            
+    "RecoveryServicesVaultUniqueID": {
+        "type": "string",
+        "defaultValue": "1234567890x1",
+        "metadata": {
+            "description": "Recovery Services Vault 1 Unique Identifier"
+        }
+    },                                                                                                                
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+          "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+      },
+      "defaultValue": "[deployment().properties.templateLink.uri]"
+    },
+    "_artifactsLocationSasToken": {
+        "type": "securestring",
+        "metadata": {
+            "description": "Auto-generated token to access _artifactsLocation. Leave it blank unless you need to provide your own value."
+        },
+        "defaultValue": ""
+    }
+  },
+  "variables": {
+    "vnet1Name": "[concat(parameters('NamingConvention'),'-VNet1')]",
+    "vnet1NameR": "[concat(parameters('NamingConvention'),'-Recovery-VNet1')]",    
+    "vnet1Prefix": "[concat(parameters('vnet1ID'),'.0.0/16')]",
+    "vnet1subnet1Name": "[concat(parameters('NamingConvention'),'-VNet1-Subnet1')]",    
+    "vnet1subnet1NameR": "[concat(parameters('NamingConvention'),'-Recovery-VNet1-Subnet1')]",        
+    "vnet1subnet1Prefix": "[concat(parameters('vnet1ID'),'.1.0/24')]",    
+    "vnet1subnet2Name": "[concat(parameters('NamingConvention'),'-VNet1-Subnet2')]",   
+    "vnet1subnet2NameR": "[concat(parameters('NamingConvention'),'-Recovery-VNet1-Subnet2')]",         
+    "vnet1subnet2Prefix": "[concat(parameters('vnet1ID'),'.2.0/24')]",    
+    "vnet1BastionsubnetPrefix": "[concat(parameters('vnet1ID'),'.253.0/24')]",        
+    "srv1lastoctet": "101",            
+    "srv1name": "[concat(parameters('NamingConvention'),'-srv-01')]",           
+    "srv1IP": "[concat(parameters('vnet1ID'),'.1.',variables('srv1lastoctet'))]",        
+    "BackupObjectID": "ff281ffe-705c-4f53-9f37-a40e6f2c68f3",
+    "ENCScriptName": "[concat(parameters('NamingConvention'),'-enc')]",                    
+    "ASRScriptName": "[concat(parameters('NamingConvention'),'-asr')]",                    
+    "BCKScriptName": "[concat(parameters('NamingConvention'),'-bck')]",                            
+    "KeyVault1Name": "[concat(parameters('NamingConvention'),'-kv1-', parameters('KeyVaultUniqueID'))]",            
+    "KeyVault2Name": "[concat(parameters('NamingConvention'),'-kv2-', parameters('KeyVaultUniqueID'))]",            
+    "Key1Name": "[concat(parameters('NamingConvention'),'-RSA-Key1')]",    
+    "Key2Name": "[concat(parameters('NamingConvention'),'-RSA-Key2')]", 
+    "DEDES1Name":   "[concat(variables('KeyVault1Name'),'-DEDES1')]",
+    "DEDES2Name":   "[concat(variables('KeyVault2Name'),'-DEDES2')]",                   
+    "RSVault1Name": "[concat(parameters('NamingConvention'),'-rv1-', parameters('RecoveryServicesVaultUniqueID'))]",            
+    "RSVault2Name": "[concat(parameters('NamingConvention'),'-rv2-', parameters('RecoveryServicesVaultUniqueID'))]",            
+    "ManagedIDName": "[concat(parameters('NamingConvention'),'-mi-', uniqueString(subscription().id))]",            
+    "Contributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"              
+  },  
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateSite1RG",
+      "location": "[deployment().Location]",
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/resourcegroup.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "ResourceGroupName": {
+                  "value": "[parameters('Site1RG')]"
+              },
+              "location": {
+                  "value": "[deployment().Location]"
+              }            
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateSite2RG",
+      "location": "[parameters('Location2')]",
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/resourcegroup.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "ResourceGroupName": {
+                  "value": "[parameters('Site2RG')]"
+              },
+              "location": {
+                  "value": "[parameters('Location2')]"
+              }            
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateManagedID",
+      "resourceGroup":  "[parameters('Site1RG')]",
+      "dependsOn": [
+        "CreateSite1RG"        
+      ],        
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/managedidentity.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "ManagedIDName": {
+                  "value": "[variables('ManagedIDName')]"
+              },
+              "location": {
+                  "value": "[deployment().Location]"
+              }
+          }
+      }
+    },  
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "AssignManagedIDRG1",
+      "resourceGroup": "[parameters('Site1RG')]",
+      "dependsOn": [
+        "CreateManagedID"
+      ],        
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/roleassignment.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "PrincipalID": {
+                  "value": "[reference('CreateManagedID').outputs.manageduseridentity.value]"
+              },
+              "RoleDefinitionID": {
+                  "value": "[variables('Contributor')]"
+              },
+              "roleAssignmentHash": {
+                  "value": "ASR1"
+              }                    
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "AssignManagedIDRG2",
+      "resourceGroup": "[parameters('Site2RG')]",
+      "dependsOn": [
+        "CreateManagedID",
+        "AssignManagedIDRG1"        
+      ],        
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/roleassignment.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "PrincipalID": {
+                  "value": "[reference('CreateManagedID').outputs.manageduseridentity.value]"
+              },
+              "RoleDefinitionID": {
+                  "value": "[variables('Contributor')]"
+              },
+              "roleAssignmentHash": {
+                  "value": "ASR2"
+              }                              
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployKeyVault1",
+      "resourceGroup": "[parameters('Site1RG')]",     
+      "dependsOn": [
+        "AssignManagedIDRG1",
+        "AssignManagedIDRG2"                
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/keyvault.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "KeyVaultName": {
+                  "value": "[variables('KeyVault1Name')]"
+              },
+              "BackupObjectID": {
+                  "value": "[variables('BackupObjectID')]"
+              },              
+              "AdminObjectID": {
+                  "value": "[parameters('AdminObjectID')]"
+              },     
+              "UserManagedObjectID": {
+                  "value": "[reference('CreateManagedID').outputs.manageduseridentity.value]"             
+              },                         
+              "location": {
+                  "value": "[deployment().Location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployKeyVault2",
+      "resourceGroup":  "[parameters('Site2RG')]",      
+      "dependsOn": [
+        "AssignManagedIDRG2"           
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/keyvault.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "KeyVaultName": {
+                  "value": "[variables('KeyVault2Name')]"
+              },
+              "BackupObjectID": {
+                  "value": "[variables('BackupObjectID')]"
+              },              
+              "AdminObjectID": {
+                  "value": "[parameters('AdminObjectID')]"
+              },     
+              "UserManagedObjectID": {
+                  "value": "[reference('CreateManagedID').outputs.manageduseridentity.value]"             
+              },                         
+              "location": {
+                  "value": "[parameters('Location2')]"
+              }
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateKey1",
+      "resourceGroup": "[parameters('Site1RG')]",    
+      "dependsOn": [
+        "DeployKeyVault1"        
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/createkey.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "Location": {
+                  "value": "[deployment().Location]"
+              },
+              "KeyVaultName": {
+                  "value": "[variables('KeyVault1Name')]"
+              },                                       
+              "KeyName": {
+                  "value": "[variables('Key1Name')]"              
+              }          
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateKey2",
+      "resourceGroup": "[parameters('Site2RG')]",    
+      "dependsOn": [
+        "DeployKeyVault2"        
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/createkey.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "Location": {
+                  "value": "[parameters('Location2')]"
+              },
+              "KeyVaultName": {
+                  "value": "[variables('KeyVault2Name')]"
+              },                                       
+              "KeyName": {
+                  "value": "[variables('Key2Name')]"              
+              }          
+          }
+      }
+    },               
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateDEDES1",
+      "resourceGroup": "[parameters('Site1RG')]",     
+      "dependsOn": [
+        "CreateKey1"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/creatededes.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "Location": {
+                  "value": "[deployment().Location]"
+              },
+              "KeyVaultName": {
+                  "value": "[variables('KeyVault1Name')]"
+              },              
+              "KeyVaultKeyUrl": {
+                  "value": "[reference('CreateKey1').outputs.KeyVaultKeyUrl.value]"                           
+              },              
+              "DEDESName": {
+                  "value": "[variables('DEDES1Name')]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "GetDEDES1PrincipalID",
+      "resourceGroup": "[parameters('Site1RG')]",     
+      "dependsOn": [
+        "CreateDEDES1"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/getdedespid.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "ManagedIDName": {
+                  "value": "[variables('ManagedIDName')]"
+              },
+              "DEDESName": {
+                  "value": "[variables('DEDES1Name')]"
+              },
+              "ResourceGroupName": {
+                  "value": "[parameters('Site1RG')]"
+              },
+              "ScriptLocation": {
+                  "value": "[deployment().Location]"
+              }              
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateDEDES2",
+      "resourceGroup": "[parameters('Site2RG')]",     
+      "dependsOn": [
+        "CreateKey2"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/creatededes.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "Location": {
+                  "value": "[parameters('Location2')]"
+              },
+              "KeyVaultName": {
+                  "value": "[variables('KeyVault2Name')]"
+              },              
+              "KeyVaultKeyUrl": {
+                  "value": "[reference('CreateKey2').outputs.KeyVaultKeyUrl.value]"                           
+              },              
+              "DEDESName": {
+                  "value": "[variables('DEDES2Name')]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "GetDEDES2PrincipalID",
+      "resourceGroup": "[parameters('Site1RG')]",     
+      "dependsOn": [
+        "CreateDEDES2"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/getdedespid.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "ManagedIDName": {
+                  "value": "[variables('ManagedIDName')]"
+              },
+              "DEDESName": {
+                  "value": "[variables('DEDES2Name')]"
+              },
+              "ResourceGroupName": {
+                  "value": "[parameters('Site2RG')]"
+              },
+              "ScriptLocation": {
+                  "value": "[deployment().Location]"
+              }              
+          }
+      }
+    },            
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "UpdateKeyVault1",
+      "resourceGroup": "[parameters('Site1RG')]",
+      "dependsOn": [        
+        "CreateDEDES1"        
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/updatekeyvault.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "KeyVaultname": {
+                  "value": "[variables('KeyVault1Name')]"
+              }, 
+              "BackupObjectID": {
+                  "value": "[variables('BackupObjectID')]"
+              },                            
+              "AdminObjectID": {
+                  "value": "[parameters('AdminObjectID')]"
+              },   
+              "UserManagedObjectID": {
+                  "value": "[reference('CreateManagedID').outputs.manageduseridentity.value]"             
+              },  
+              "DESObjectID": {
+                  "value": "[reference('GetDEDES1PrincipalID').outputs.DiskEncryptionSet.value]"             
+              },                                                                                                      
+              "location": {
+                  "value": "[deployment().location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "UpdateKeyVault2",
+      "resourceGroup": "[parameters('Site2RG')]",
+      "dependsOn": [        
+        "CreateDEDES2"        
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/updatekeyvault.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "KeyVaultname": {
+                  "value": "[variables('KeyVault2Name')]"
+              }, 
+              "BackupObjectID": {
+                  "value": "[variables('BackupObjectID')]"
+              },                            
+              "AdminObjectID": {
+                  "value": "[parameters('AdminObjectID')]"
+              },   
+              "UserManagedObjectID": {
+                  "value": "[reference('CreateManagedID').outputs.manageduseridentity.value]"             
+              },  
+              "DESObjectID": {
+                  "value": "[reference('GetDEDES2PrincipalID').outputs.DiskEncryptionSet.value]"             
+              },                                                                                                                                                                                   
+              "location": {
+                  "value": "[parameters('Location2')]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployRSVault1",
+      "resourceGroup":   "[parameters('Site1RG')]",      
+      "dependsOn": [
+        "UpdateKeyVault1"        
+      ],       
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/recoveryservicesvault.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "RSVaultName": {
+                  "value": "[variables('RSVault1Name')]"
+              },
+              "location": {
+                  "value": "[deployment().location]"
+              }
+          }
+      }
+    },           
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployRSVault2",
+      "resourceGroup":   "[parameters('Site2RG')]",      
+      "dependsOn": [
+        "DeployRSVault1"        
+      ],       
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/recoveryservicesvault.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "RSVaultName": {
+                  "value": "[variables('RSVault2Name')]"
+              },
+              "location": {
+                  "value": "[parameters('Location2')]"
+              }
+          }
+      }
+    },                               
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "VNet1",
+      "resourceGroup": "[parameters('Site1RG')]",
+      "dependsOn": [
+        "UpdateKeyVault1"        
+      ],             
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/vnet.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "vnetName": {
+                  "value": "[variables('vnet1Name')]"
+              },
+              "vnetprefix": {
+                  "value": "[variables('vnet1Prefix')]"
+              },
+              "subnet1Name": {
+                  "value": "[variables('vnet1subnet1Name')]"
+              },
+              "subnet1Prefix": {
+                  "value": "[variables('vnet1subnet1Prefix')]"
+              },
+              "subnet2Name": {
+                "value": "[variables('vnet1subnet2Name')]"
+              },
+              "subnet2Prefix": {
+                "value": "[variables('vnet1subnet2Prefix')]"
+              },              
+              "BastionsubnetPrefix": {
+                "value": "[variables('vnet1BastionsubnetPrefix')]"
+              },              
+              "location": {
+                  "value": "[deployment().Location]"
+              }
+          }
+      }
+    },     
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "VNet1R",
+      "resourceGroup": "[parameters('Site2RG')]",
+      "dependsOn": [
+        "UpdateKeyVault1"        
+      ],             
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/vnet.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "vnetName": {
+                  "value": "[variables('vnet1NameR')]"
+              },
+              "vnetprefix": {
+                  "value": "[variables('vnet1Prefix')]"
+              },
+              "subnet1Name": {
+                  "value": "[variables('vnet1subnet1NameR')]"
+              },
+              "subnet1Prefix": {
+                  "value": "[variables('vnet1subnet1Prefix')]"
+              },
+              "subnet2Name": {
+                "value": "[variables('vnet1subnet2NameR')]"
+              },
+              "subnet2Prefix": {
+                "value": "[variables('vnet1subnet2Prefix')]"
+              },              
+              "BastionsubnetPrefix": {
+                "value": "[variables('vnet1BastionsubnetPrefix')]"
+              },              
+              "location": {
+                  "value": "[parameters('Location2')]"
+              }
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "deploySRV1VM",
+      "resourceGroup": "[parameters('Site1RG')]",
+      "dependsOn": [
+        "UpdateKeyVault2"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/1nic-1disk-vm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('srv1name')]"
+              },
+              "computerIP": {
+                  "value": "[variables('srv1IP')]"
+              },
+              "Publisher": {
+                  "value": "MicrosoftWindowsServer"
+              },
+              "Offer": {
+                  "value": "WindowsServer"
+              },
+              "OSVersion": {
+                "value": "[parameters('SRV1OSVersion')]"
+              },              
+              "LicenseType": {
+                "value": "[parameters('WindowsServerLicenseType')]"
+              },               
+              "VMSize": {
+                "value": "[parameters('SRV1VMSize')]"
+              },
+              "vnetName": {
+                "value": "[variables('vnet1Name')]"
+              },            
+              "subnetName": {
+                "value": "[variables('vnet1subnet1Name')]"
+              },            
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },                                                                                                                                        
+              "location": {
+                  "value": "[deployment().Location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "EncryptSRV1",
+      "resourceGroup": "[parameters('Site1RG')]",
+      "dependsOn": [
+        "deploySRV1VM"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/encryptvm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "ManagedIDName": {
+                  "value": "[variables('ManagedIDName')]"
+              },
+              "DEDESName": {
+                  "value": "[variables('DEDES1Name')]"
+              },               
+              "VMName": {
+                  "value": "[variables('srv1name')]"
+              },              
+              "ResourceGroupName": {
+                  "value":  "[parameters('Site1RG')]"
+              },
+              "ScriptName": {
+                  "value": "[concat(variables('ENCScriptName'),'-01')]"           
+              },                
+              "ScriptLocation": {
+                  "value": "[deployment().Location]"
+              }                 
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "BackupSRV1",
+      "resourceGroup": "[parameters('Site1RG')]",
+      "dependsOn": [
+        "EncryptSRV1"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/backupvm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "BackupPolicyName": {
+                  "value": "[concat(parameters('NamingConvention'),'-Site1-BackupPolicy')]"
+              },
+              "RSVaultname": {
+                  "value": "[variables('RSVault1Name')]"
+              },           
+              "ResourceGroupName": {
+                  "value":  "[parameters('Site1RG')]"
+              },
+              "VMName": {
+                  "value": "[variables('srv1name')]"
+              },    
+              "ManagedIDName": {
+                  "value": "[variables('ManagedIDName')]"
+              },                            
+              "ScriptName": {
+                  "value": "[concat(variables('BCKScriptName'),'-01')]"           
+              },                
+              "ScriptLocation": {
+                  "value": "[deployment().Location]"
+              },
+              "_artifactsLocation": {
+                "value": "[parameters('_artifactsLocation')]"
+              },                                                                                                            
+              "_artifactsLocationSasToken": {
+                "value": "[parameters('_artifactsLocationSasToken')]"
+              }                               
+          }
+      }
+    },                                                              
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "EnableASRforSRV1",
+      "resourceGroup": "[parameters('Site1RG')]",
+      "dependsOn": [
+        "BackupSRV1"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/enableasr.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "RSVaultname": {
+                  "value": "[reference('DeployRSVault2').outputs.RSVaultName.value]"            
+              }, 
+              "RecoveryVNetName": {
+                  "value": "[reference('VNet1R').outputs.vnetName.value]"             
+              },
+              "DEDESName": {
+                  "value": "[variables('DEDES2Name')]"
+              },                                       
+              "Site1Name": {
+                  "value": "site1"
+              },              
+              "Site2Name": {
+                  "value": "site2"
+              },              
+              "SourceRG": {
+                  "value":  "[parameters('Site1RG')]"
+              },    
+              "TargetRG": {
+                  "value":  "[parameters('Site2RG')]"
+              },                  
+              "location1": {
+                  "value": "[deployment().location]"
+              },
+              "location2": {
+                  "value": "[parameters('Location2')]"
+              },                                                    
+              "VMName": {
+                  "value": "[variables('srv1name')]"
+              },              
+              "ManagedIDName": {
+                  "value": "[variables('ManagedIDName')]"
+              },              
+              "ScriptName": {
+                  "value": "[concat(variables('ASRScriptName'),'-01')]"           
+              },                              
+              "ScriptLocation": {
+                  "value": "[deployment().Location]"
+              },
+              "_artifactsLocation": {
+                "value": "[parameters('_artifactsLocation')]"
+              },                                                                                                            
+              "_artifactsLocationSasToken": {
+                "value": "[parameters('_artifactsLocationSasToken')]"
+              }                                                                  
+          }
+      }
+    }                      
+  ]
+}

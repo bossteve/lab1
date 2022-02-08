@@ -1,0 +1,685 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {          
+    "hostpoolType": {
+        "defaultValue": "Pooled",      
+        "allowedValues": [
+            "Pooled",
+            "Personal"
+        ],
+        "type": "String",
+        "metadata": {
+            "description": "Set this parameter to Personal if you would like to enable Persistent Desktop experience. Defaults to false."
+        }
+    },    
+    "personalDesktopAssignmentType": {
+        "defaultValue": "Automatic",
+        "allowedValues": [
+            "Automatic",
+            "Direct",
+            ""
+        ],
+        "type": "String",
+        "metadata": {
+            "description": "Set the type of assignment for a Personal hostpool type"
+        }
+    },    
+    "maxSessionLimit": {
+        "defaultValue": 99999,
+        "type": "Int",
+        "metadata": {
+            "description": "Maximum number of sessions."
+        }
+    },     
+    "loadBalancerType": {
+        "defaultValue": "BreadthFirst",
+        "allowedValues": [
+            "BreadthFirst",
+            "DepthFirst",
+            "Persistent"
+        ],
+        "type": "String",
+        "metadata": {
+            "description": "Type of load balancer algorithm."
+        }
+    },          
+    "validationEnvironment": {
+        "defaultValue": false,
+        "type": "Bool",
+        "metadata": {
+            "description": "Whether to use validation enviroment."
+        }
+    },         
+    "vmGalleryImageSKU": {
+        "defaultValue": "20h2-evd-o365pp",
+        "allowedValues": [
+            "20h2-evd-o365pp",
+            "20h1-evd-o365pp",
+            "19h2-evd-o365pp"
+        ],
+        "type": "String",
+        "metadata": {
+            "description": "The VM Image Type"
+        }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+        "allowedValues": [
+            "Standard_D2as_v4",
+            "Standard_D2s_v3",
+            "Standard_B2ms",
+            "D2ds_v4",
+            "D2s_v4"
+        ],      
+      "metadata": {
+          "description": "WVD VMSize"
+      }
+    },    
+    "vmDiskType": {
+        "defaultValue": "StandardSSD_LRS",
+        "allowedValues": [
+            "Premium_LRS",
+            "StandardSSD_LRS",
+            "Standard_LRS"
+        ],
+        "type": "String",
+        "metadata": {
+            "description": "The VM disk type for the VM: HDD or SSD."
+        }
+    },
+    "vmnumberofInstances": {
+        "defaultValue": 2,
+        "type": "int",
+        "metadata": {
+            "description": "Enter the number of WVD Session Hosts."
+        }
+    },    
+    "vmInitialNumber": {
+        "defaultValue": 0,
+        "type": "int",
+        "metadata": {
+            "description": "VM name prefix initial number."
+        }
+    },   
+    "availabilitySetUpdateDomainCount": {
+        "defaultValue": 5,
+        "allowedValues": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+        ],
+        "type": "Int",
+        "metadata": {
+            "description": "The platform update domain count of avaiability set to be created."
+        }
+    },
+    "availabilitySetFaultDomainCount": {
+        "defaultValue": 2,
+        "allowedValues": [
+            1,
+            2,
+            3
+        ],
+        "type": "Int",
+        "metadata": {
+            "description": "The platform fault domain count of avaiability set to be created."
+        }
+    },    
+    "adminUsername": {
+        "type": "string",
+        "metadata": {
+            "description": "The name of the Administrator of the new VM and Domain"
+        }
+    },
+    "adminPassword": {
+        "type": "securestring",
+      "metadata": {
+        "description": "The password for the Administrator account of the new VM and Domain"
+      }
+    },      
+    "PrincipalID": {
+        "defaultValue": "3a9e64dd-8e91-4ffa-99ee-d90766bb0515",        
+        "type": "string",
+        "metadata": {
+            "description": "Object ID of Group that requires WVD Access"
+        }
+    },         
+    "NamingConvention": {
+      "type": "string",
+      "defaultValue": "khl",
+      "maxLength": 4,      
+      "metadata": {
+        "description": "VNet1 Name"
+      }
+    },
+    "SubDNSDomain": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+          "description": "Sub DNS Domain Name Example:  sub1. must include a DOT AT END"
+      }
+    },     
+    "SubDNSBaseDN": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+          "description": "Sub DNS Domain Name Example:  DC=sub2,DC=sub1, must include COMMA AT END"
+      }
+    },            
+    "InternalDomain": {
+      "type": "string",
+      "defaultValue": "killerhomelab",
+      "metadata": {
+          "description": "Internal Domain Name"
+      }
+    },       
+    "InternalTLD": {
+      "type": "string",
+      "defaultValue": "com",
+      "allowedValues": [
+        "com",
+        "net",
+        "org",
+        "edu",
+        "gov",
+        "mil",
+        "us",
+        "tk",
+        "ml",
+        "local"
+      ],      
+      "metadata": {
+          "description": "Top-Level Domain Name"
+      }
+    }, 
+    "roleAssignmentGuid1": {
+        "type": "string",
+        "defaultValue": "[newGuid()]",
+        "metadata": {
+            "description": "A new GUID used to identify the role assignment"
+        }
+    },   
+    "roleAssignmentGuid2": {
+        "type": "string",
+        "defaultValue": "[newGuid()]",
+        "metadata": {
+            "description": "A new GUID used to identify the role assignment"
+        }
+    },
+    "WVDTokenPhrase": {
+        "defaultValue": "[newGuid()]",
+        "type": "string",
+        "metadata": {
+        "description": "PassPhrase to generate Registration Key"
+      }
+    },        
+    "BaseTime": {
+        "defaultValue": "[utcNow('u')]",
+        "type": "String",
+        "metadata": {
+            "description": "Hostpool token expiration time"
+        }
+    },                                                   
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+          "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+      },
+      "defaultValue": "[deployment().properties.templateLink.uri]"
+    },
+    "_artifactsLocationSasToken": {
+        "type": "securestring",
+        "metadata": {
+            "description": "Auto-generated token to access _artifactsLocation. Leave it blank unless you need to provide your own value."
+        },
+        "defaultValue": ""
+    }
+  },
+  "variables": {
+    "vnet1Name": "[concat(parameters('NamingConvention'),'-VNet1')]",
+    "vnet1subnet1Name": "[concat(parameters('NamingConvention'),'-VNet1-Subnet1')]",    
+    "subnet-Id": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', variables('vnet1Name'), variables('Vnet1Subnet1Name'))]",    
+    "HostPoolARMPath": "[resourceId(resourceGroup().name, 'Microsoft.DesktopVirtualization/hostpools', variables('HostPoolName'))]", 
+    "InternaldomainName": "[concat(parameters('SubDNSDomain'),parameters('InternalDomain'),'.',parameters('InternalTLD'))]",
+    "BaseDN": "[concat(parameters('SubDNSBaseDN'),'DC=',parameters('InternalDomain'),',DC=',parameters('InternalTLD'))]",
+    "WKOUPath": "[concat('OU=Windows 10,OU=Workstations,',variables('BaseDN'))]",
+    "HostPoolName": "[concat(parameters('NamingConvention'),'-Hosted-Pool')]",
+    "DesktopAppGroupName": "[concat(variables('HostPoolName'),'-DAG')]",    
+    "RemoteAppGroupName": "[concat(variables('HostPoolName'),'-RAG')]",        
+    "WorkSpaceName": "[concat(variables('HostPoolName'),'-WorkSpace')]",   
+    "AvailabilitySetName": "[concat(variables('HostPoolName'),'-AVSet')]",  
+    "SessionHostTemplate": "[concat('{\"domain\":\"',variables('InternaldomainName'), '\",\"galleryImageOffer\":\"office-365\",\"galleryImagePublisher\":\"MicrosoftWindowsDesktop\",\"galleryImageSKU\":\"',parameters('vmGalleryImageSKU'),'\",\"imageType\":\"Gallery\",\"imageUri\":null,\"customImageId\":null,\"namePrefix\":\"', parameters('NamingConvention'),'\",\"osDiskType\":\"',parameters('vmDiskType'),'\",\"useManagedDisks\":true,\"vmSize\":{\"id\":\"',parameters('vmSize'),'\",\"cores\":2,\"ram\":8},\"galleryItemId\":\"MicrosoftWindowsDesktop.office-365',parameters('vmGalleryImageSKU'),'\"}')]",      
+    "vmGalleryImageOffer": "office-365",
+    "vmGalleryImagePublisher": "MicrosoftWindowsDesktop",
+    "rdshPrefix": "[concat(parameters('NamingConvention'),'-')]",    
+    "artifactsLocation": "https://wvdportalstorageblob.blob.core.windows.net/galleryartifacts/Configuration.zip",
+    "RoleDefinitionID": "1d18fff3-a72a-46b5-b4a9-0b38a3cd7e63",
+    "Ring": 1,
+    "add4Hours": "[dateTimeAdd(parameters('baseTime'), 'PT4H')]"
+  },  
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployHostedPool",     
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+            "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/wvdpool.json', parameters('_artifactsLocationSasToken')))]",
+            "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+            "HostPoolName": {
+                "value": "[variables('HostPoolName')]"
+            },
+            "HostPoolType": {
+                "value": "[parameters('HostPoolType')]"
+            },
+            "personalDesktopAssignmentType": {
+                "value": "[parameters('personalDesktopAssignmentType')]"
+            },
+            "maxSessionLimit": {
+                "value": "[parameters('maxSessionLimit')]"
+            },
+            "loadBalancerType": {
+                "value": "[parameters('loadBalancerType')]"
+            },
+            "vmTemplate": {
+                "value": "[variables('SessionHostTemplate')]"
+            },
+            "tokenExpirationTime": {
+                "value": "[variables('add4Hours')]"
+            },
+            "validationEnvironment": {
+                "value": "[parameters('validationEnvironment')]"
+            },
+            "Ring": {
+                "value": "[variables('Ring')]"
+            },
+            "Token": {
+                "value": "[parameters('WVDTokenPhrase')]"
+            },                                                                                    
+            "location": {
+                "value": "[resourceGroup().location]"
+            }                                                                                                                   
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployDesktopGroup",   
+      "dependsOn": [
+        "DeployHostedPool"
+      ],   
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+            "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/desktopapplicationgroup.json', parameters('_artifactsLocationSasToken')))]",
+            "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+            "AppGroupName": {
+                "value": "[variables('DesktopAppGroupName')]"
+            }, 
+            "NamingConvention": {
+                "value": "[parameters('NamingConvention')]"
+            },
+            "HostPoolARMPath": {
+                "value": "[variables('HostPoolARMPath')]"
+            },
+            "location": {
+                "value": "[resourceGroup().location]"
+            },
+            "RoleAssignmentGUID": {
+                "value": "[parameters('roleAssignmentGuid1')]"
+            },
+            "PrincipalID": {
+                "value": "[parameters('PrincipalID')]"
+            },
+            "RoleDefinitionID": {
+                "value": "[variables('RoleDefinitionID')]"
+            }                                                                                                                                                                                                                           
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployRemoteApplicationGroup",   
+      "dependsOn": [
+        "DeployDesktopGroup"
+      ],   
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+            "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/remoteapplicationgroup.json', parameters('_artifactsLocationSasToken')))]",
+            "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+            "AppGroupName": {
+                "value": "[variables('RemoteAppGroupName')]"
+            }, 
+            "NamingConvention": {
+                "value": "[parameters('NamingConvention')]"
+            },             
+            "HostPoolARMPath": {
+                "value": "[variables('HostPoolARMPath')]"
+            },
+            "selectedApps": {
+                "value": [
+                    {
+                        "id": "[concat('/subscriptions/',subscription().id,'/resourcegroups/',resourceGroup().name, '/providers/Microsoft.DesktopVirtualization/applicationgroups/',variables('RemoteAppGroupName'),'/applications/Excel')]",
+                        "name": "Excel",
+                        "type": "Microsoft.WindowsVirualDesktop/applicationGroups/applications",
+                        "properties": {
+                            "applicationType": "Inbuilt",
+                            "friendlyName": "",
+                            "description": "",
+                            "filePath": "C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE",
+                            "iconPath": "C:\\Program Files\\Microsoft Office\\Root\\VFS\\Windows\\Installer\\{90160000-000F-0000-1000-0000000FF1CE}\\xlicons.exe",
+                            "iconIndex": 0,
+                            "commandLineSetting": "DoNotAllow",
+                            "commandLineArguments": "",
+                            "showInPortal": true
+                        }
+                    },
+                    {
+                        "id": "[concat('/subscriptions/',subscription().id,'/resourcegroups/',resourceGroup().name, '/providers/Microsoft.DesktopVirtualization/applicationgroups/',variables('RemoteAppGroupName'),'/applications/Microsoft Edge')]",
+                        "name": "Microsoft Edge",
+                        "type": "Microsoft.WindowsVirualDesktop/applicationGroups/applications",
+                        "properties": {
+                            "applicationType": "Inbuilt",
+                            "friendlyName": "",
+                            "description": "",
+                            "filePath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+                            "iconPath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+                            "iconIndex": 0,
+                            "commandLineSetting": "DoNotAllow",
+                            "commandLineArguments": "",
+                            "showInPortal": true
+                        }
+                    },
+                    {
+                        "id": "[concat('/subscriptions/',subscription().id,'/resourcegroups/',resourceGroup().name, '/providers/Microsoft.DesktopVirtualization/applicationgroups/',variables('RemoteAppGroupName'),'/applications/OneDrive')]",
+                        "name": "OneDrive",
+                        "type": "Microsoft.WindowsVirualDesktop/applicationGroups/applications",
+                        "properties": {
+                            "applicationType": "Inbuilt",
+                            "friendlyName": "",
+                            "description": "",
+                            "filePath": "C:\\Program Files (x86)\\Microsoft OneDrive\\OneDrive.exe",
+                            "iconPath": "C:\\Program Files (x86)\\Microsoft OneDrive\\OneDrive.exe",
+                            "iconIndex": 1,
+                            "commandLineSetting": "DoNotAllow",
+                            "commandLineArguments": "",
+                            "showInPortal": true
+                        }
+                    },
+                    {
+                        "id": "[concat('/subscriptions/',subscription().id,'/resourcegroups/',resourceGroup().name, '/providers/Microsoft.DesktopVirtualization/applicationgroups/',variables('RemoteAppGroupName'),'/applications/OneNote')]",                        
+                        "name": "OneNote",
+                        "type": "Microsoft.WindowsVirualDesktop/applicationGroups/applications",
+                        "properties": {
+                            "applicationType": "Inbuilt",
+                            "friendlyName": "",
+                            "description": "",
+                            "filePath": "C:\\Program Files\\Microsoft Office\\root\\Office16\\ONENOTE.EXE",
+                            "iconPath": "C:\\Program Files\\Microsoft Office\\Root\\VFS\\Windows\\Installer\\{90160000-000F-0000-1000-0000000FF1CE}\\joticon.exe",
+                            "iconIndex": 0,
+                            "commandLineSetting": "DoNotAllow",
+                            "commandLineArguments": "",
+                            "showInPortal": true
+                        }
+                    },
+                    {
+                        "id": "[concat('/subscriptions/',subscription().id,'/resourcegroups/',resourceGroup().name, '/providers/Microsoft.DesktopVirtualization/applicationgroups/',variables('RemoteAppGroupName'),'/applications/Outlook')]",
+                        "name": "Outlook",
+                        "type": "Microsoft.WindowsVirualDesktop/applicationGroups/applications",
+                        "properties": {
+                            "applicationType": "Inbuilt",
+                            "friendlyName": "",
+                            "description": "",
+                            "filePath": "C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE",
+                            "iconPath": "C:\\Program Files\\Microsoft Office\\Root\\VFS\\Windows\\Installer\\{90160000-000F-0000-1000-0000000FF1CE}\\outicon.exe",
+                            "iconIndex": 0,
+                            "commandLineSetting": "DoNotAllow",
+                            "commandLineArguments": "",
+                            "showInPortal": true
+                        }
+                    },
+                    {
+                        "id": "[concat('/subscriptions/',subscription().id,'/resourcegroups/',resourceGroup().name, '/providers/Microsoft.DesktopVirtualization/applicationgroups/',variables('RemoteAppGroupName'),'/applications/PowerPoint')]",                        
+                        "name": "PowerPoint",
+                        "type": "Microsoft.WindowsVirualDesktop/applicationGroups/applications",
+                        "properties": {
+                            "applicationType": "Inbuilt",
+                            "friendlyName": "",
+                            "description": "",
+                            "filePath": "C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE",
+                            "iconPath": "C:\\Program Files\\Microsoft Office\\Root\\VFS\\Windows\\Installer\\{90160000-000F-0000-1000-0000000FF1CE}\\pptico.exe",
+                            "iconIndex": 0,
+                            "commandLineSetting": "DoNotAllow",
+                            "commandLineArguments": "",
+                            "showInPortal": true
+                        }
+                    },
+                    {
+                        "id": "[concat('/subscriptions/',subscription().id,'/resourcegroups/',resourceGroup().name, '/providers/Microsoft.DesktopVirtualization/applicationgroups/',variables('RemoteAppGroupName'),'/applications/Remote Desktop Connection')]",
+                        "name": "Remote Desktop Connection",
+                        "type": "Microsoft.WindowsVirualDesktop/applicationGroups/applications",
+                        "properties": {
+                            "applicationType": "Inbuilt",
+                            "friendlyName": "",
+                            "description": "",
+                            "filePath": "C:\\Windows\\system32\\mstsc.exe",
+                            "iconPath": "C:\\Windows\\system32\\mstsc.exe",
+                            "iconIndex": 0,
+                            "commandLineSetting": "DoNotAllow",
+                            "commandLineArguments": "",
+                            "showInPortal": true
+                        }
+                    },
+                    {
+                        "id": "[concat('/subscriptions/',subscription().id,'/resourcegroups/',resourceGroup().name, '/providers/Microsoft.DesktopVirtualization/applicationgroups/',variables('RemoteAppGroupName'),'/applications/Windows PowerShell ISE')]",
+                        "name": "Windows PowerShell ISE",
+                        "type": "Microsoft.WindowsVirualDesktop/applicationGroups/applications",
+                        "properties": {
+                            "applicationType": "Inbuilt",
+                            "friendlyName": "",
+                            "description": "",
+                            "filePath": "C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\PowerShell_ISE.exe",
+                            "iconPath": "C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\powershell_ise.exe",
+                            "iconIndex": 0,
+                            "commandLineSetting": "DoNotAllow",
+                            "commandLineArguments": "",
+                            "showInPortal": true
+                        }
+                    },
+                    {
+                        "id": "[concat('/subscriptions/',subscription().id,'/resourcegroups/',resourceGroup().name, '/providers/Microsoft.DesktopVirtualization/applicationgroups/',variables('RemoteAppGroupName'),'/applications/Word')]",
+                        "name": "Word",
+                        "type": "Microsoft.WindowsVirualDesktop/applicationGroups/applications",
+                        "properties": {
+                            "applicationType": "Inbuilt",
+                            "friendlyName": "",
+                            "description": "",
+                            "filePath": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+                            "iconPath": "C:\\Program Files\\Microsoft Office\\Root\\VFS\\Windows\\Installer\\{90160000-000F-0000-1000-0000000FF1CE}\\wordicon.exe",
+                            "iconIndex": 0,
+                            "commandLineSetting": "DoNotAllow",
+                            "commandLineArguments": "",
+                            "showInPortal": true
+                        }
+                    }                    
+                ]
+            },            
+            "location": {
+                "value": "[resourceGroup().location]"
+            },
+            "RoleAssignmentGUID": {
+                "value": "[parameters('roleAssignmentGuid2')]"
+            },
+            "PrincipalID": {
+                "value": "[parameters('PrincipalID')]"
+            },
+            "RoleDefinitionID": {
+                "value": "[variables('RoleDefinitionID')]"
+            }                                                                                                                                                                                                                                                                                                                                                                            
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployToWorkspace",   
+      "dependsOn": [
+        "DeployDesktopGroup",
+        "DeployRemoteApplicationGroup"
+      ],   
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+            "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/workspace.json', parameters('_artifactsLocationSasToken')))]",
+            "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+            "WorkSpaceName": {
+                "value": "[variables('WorkSpaceName')]"
+            },  
+            "AppGroup1Name": {
+                "value": "[variables('DesktopAppGroupName')]"
+            },        
+            "AppGroup2Name": {
+                "value": "[variables('RemoteAppGroupName')]"
+            },                              
+            "location": {
+                "value": "[resourceGroup().location]"
+            } 
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployAVSet",   
+      "dependsOn": [
+        "DeployToWorkspace"
+      ],   
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+            "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/avset.json', parameters('_artifactsLocationSasToken')))]",
+            "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+            "AvailabilitySetName": {
+                "value": "[variables('AvailabilitySetName')]"
+            },
+            "availabilitySetUpdateDomainCount": {
+                "value": "[parameters('availabilitySetUpdateDomainCount')]"
+            },
+            "availabilitySetFaultDomainCount": {
+                "value": "[parameters('availabilitySetFaultDomainCount')]"
+            },            
+            "location": {
+                "value": "[resourceGroup().location]"
+            } 
+        }
+      }
+    },          
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeploySessionHosts",   
+      "dependsOn": [
+        "DeployAVSet"
+      ],   
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+            "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/sessionhosts.json', parameters('_artifactsLocationSasToken')))]",
+            "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+            "availabilitySetName": {
+                "value": "[variables('availabilitySetName')]"
+            },
+            "vmGalleryImageOffer": {
+                "value": "[variables('vmGalleryImageOffer')]"
+            },
+            "vmGalleryImagePublisher": {
+                "value": "[variables('vmGalleryImagePublisher')]"
+            },
+            "vmGalleryImageSKU": {
+                "value": "[parameters('vmGalleryImageSKU')]"
+            },
+            "rdshPrefix": {
+                "value": "[variables('rdshPrefix')]"
+            },
+            "rdshNumberOfInstances": {
+                "value": "[parameters('vmNumberOfInstances')]"
+            },
+            "rdshVMDiskType": {
+                "value": "[parameters('vmDiskType')]"
+            },
+            "rdshVmSize": {
+                "value": "[parameters('vmSize')]"
+            },
+            "enableAcceleratedNetworking": {
+                "value": false
+            },            
+            "subnet-id": {
+                "value": "[variables('subnet-id')]"
+            },
+            "location": {
+                "value": "[resourceGroup().location]"
+            },
+            "vmInitialNumber": {
+                "value": "[parameters('vmInitialNumber')]"
+            },       
+            "hostpoolToken": {
+                "value": "[reference('DeployHostedPool').outputs.RegistrationInfoToken.value]"             
+            },             
+            "hostpoolName": {
+                "value": "[variables('hostpoolName')]"
+            },
+            "ouPath": {
+                "value": "[variables('WKOUPath')]"
+            },            
+            "domain": {
+                "value": "[variables('InternalDomainName')]"
+            },
+            "administratorAccountUsername": {
+                "value": "[parameters('adminUsername')]"
+            },
+            "administratorAccountPassword": {
+                "value": "[parameters('adminPassword')]"
+            },
+            "artifactsLocation": {
+                "value": "[variables('artifactsLocation')]"
+            }            
+        }
+      }
+    }               
+  ]
+}

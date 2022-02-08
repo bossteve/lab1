@@ -1,0 +1,71 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "type": "string",
+            "metadata": {
+                "description": "VPN Gateway Name"
+              }
+        },
+        "vnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Existing VNET where VPN Gateway will be connected"
+            }
+        },
+        "location": {
+            "type": "string",
+            "metadata": {
+              "description": "Location for all resources."
+            }
+          }        
+    },
+    "variables": {
+        "SubnetName": "GatewaySubnet",
+        "PublicIPName": "[concat(parameters('name'),'-pip')]",        
+        "subnetId": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('subnetName'))]"
+    },    
+    "resources": [
+        {
+            "apiVersion": "2019-04-01",
+            "name": "[parameters('name')]",
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', variables('PublicIPName'))]"
+            ],
+            "properties": {
+                "gatewayType": "VPN",
+                "ipConfigurations": [
+                    {
+                        "name": "default",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnetId')]"
+                            },
+                            "publicIpAddress": {
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIPAddresses', variables('PublicIPName'))]"
+                            }
+                        }
+                    }
+                ],
+                "vpnType": "RouteBased",
+                "sku": {
+                    "name": "Basic",
+                    "tier": "Basic"
+                }
+            }
+        },
+        {
+            "apiVersion": "2019-02-01",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('PublicIPName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic"
+            }
+        }
+    ]
+}

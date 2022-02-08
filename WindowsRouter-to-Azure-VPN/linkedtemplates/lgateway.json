@@ -1,0 +1,46 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "type": "string",
+            "metadata": {
+                "description": "VPN Gateway Name"
+              }
+        },
+        "SubnetPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Subnet Prefix"
+            }
+        },
+        "RemoteGatewayIP": {
+            "type": "string",
+            "metadata": {
+                "description": "Remote VPN Gateway IP"
+            }
+        },        
+        "location": {
+            "type": "string",
+            "metadata": {
+              "description": "Location for all resources."
+            }
+          }        
+    },   
+    "resources": [
+        {
+            "name": "[parameters('Name')]",
+            "type": "Microsoft.Network/localNetworkGateways",
+            "apiVersion": "2019-02-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "localNetworkAddressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('SubnetPrefix')]"
+                    ]
+                },
+                "gatewayIpAddress": "[parameters('RemoteGatewayIP')]"
+            }
+        }        
+    ]
+}

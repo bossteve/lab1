@@ -1,0 +1,74 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "ManagedIDName": {
+          "type": "string",
+          "metadata": {
+            "description": "Managed ID Name"
+          }
+        },
+        "DEDESName": {
+          "type": "string",
+          "metadata": {
+            "description": "Double Encrypted Disk Encryption Set Name"
+          }
+        },
+        "ResourceGroupName": {
+          "type": "string",
+          "metadata": {
+            "description": "ResourceGroupName"
+          }
+        },        
+        "ScriptLocation": {
+            "type": "string",
+          "metadata": {
+            "description": "Script Location"
+          }
+        }
+    },
+    "variables": {
+      "DeploymentScriptName": "[concat('Get',parameters('DEDESName'),'Principal')]"
+    },
+    "resources": [
+        {
+          "type": "Microsoft.Resources/deploymentScripts",
+          "apiVersion": "2020-10-01",
+          "name": "[variables('DeploymentScriptName')]",
+          "location": "[parameters('ScriptLocation')]",
+          "kind": "AzurePowerShell",      
+          "identity": {
+            "type": "UserAssigned",
+            "userAssignedIdentities": {
+              "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('ManagedIDName'))]": {
+              }
+            }
+          },
+          "properties": {
+            "azPowerShellVersion": "5.0",
+            "timeout": "PT1H",
+            "arguments": "[format(' -DESName {0} -ResourceGroupName {1}', parameters('DEDESName'), parameters('ResourceGroupName'))]", // can pass an argument string, double quotes must be escaped
+            "scriptContent": "
+              param(
+              [string] [Parameter(Mandatory=$true)] $DESName,
+              [string] [Parameter(Mandatory=$true)] $ResourceGroupName
+              )
+    
+              $des = Get-AzDiskEncryptionSet -Name $DESName -ResourceGroupName $ResourceGroupName
+              $output = $des.Identity.PrincipalId
+              Write-Output $output
+              $DeploymentScriptOutputs = @{}
+              $DeploymentScriptOutputs['text'] = $output
+            ",
+            "cleanupPreference": "OnSuccess",
+            "retentionInterval": "P1D"
+          }
+        }
+      ],
+    "outputs": {
+        "DiskEncryptionSet": {
+            "type": "string",
+            "value": "[reference(variables('DeploymentScriptName')).outputs.text]"
+        }
+      }      
+    }

@@ -1,0 +1,88 @@
+{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "BackupPolicyName": {
+      "type": "string",
+      "metadata": {
+        "description": "Backup Policy Name"
+      }
+    },
+    "RSVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Recovery Services Vault Name"
+      }
+    },
+    "ResourceGroupName": {
+        "type": "string",
+        "metadata": {
+            "description": "Resource Group Name"
+        }
+    },  
+    "vmName": {
+      "type": "string",
+      "metadata": {
+        "description": "VM to be Backed Up"
+      }
+    },  
+    "ManagedIDName": {
+      "type": "string",
+      "metadata": {
+        "description": "Managed ID Name"
+      }
+    },               
+    "ScriptName": {
+        "type": "string",
+      "metadata": {
+        "description": "Script Name"
+      }
+    },         
+    "ScriptLocation": {
+        "type": "string",
+      "metadata": {
+        "description": "Script Location"
+      }
+    },
+    "_artifactsLocation": {
+        "type": "string",
+        "metadata": {
+            "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+        }
+    },
+    "_artifactsLocationSasToken": {
+        "type": "securestring",
+        "metadata": {
+            "description": "Auto-generated token to access _artifactsLocation"
+        }
+    }    
+},
+"variables": {
+    "ScriptURL": "[uri(parameters('_artifactsLocation'), concat('Scripts/backupvm.ps1', parameters('_artifactsLocationSasToken')))]"
+},
+"resources": [
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2020-10-01",
+      "name": "[parameters('ScriptName')]",
+      "location": "[parameters('ScriptLocation')]",
+      "kind": "AzurePowerShell",      
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('ManagedIDName'))]": {
+          }
+        }
+      },
+      "properties": {
+        "azPowerShellVersion": "5.0",
+        "timeout": "PT1H",
+        "arguments": "[format(' -BackupPolicyName {0} -RSVaultName {1} -ResourceGroupName {2} -vmName {3}', parameters('BackupPolicyName'), parameters('RSVaultName'), parameters('ResourceGroupName'), parameters('vmName'))]", // can pass an argument string, double quotes must be escaped
+        "primaryScriptUri": "[variables('ScriptURL')]",
+        "cleanupPreference": "OnSuccess",
+        "retentionInterval": "P1D"
+      }
+    }
+  ]    
+}
+

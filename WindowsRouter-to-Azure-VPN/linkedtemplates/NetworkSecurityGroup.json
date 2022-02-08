@@ -1,0 +1,64 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    "networkSecurityGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "VNet name"
+      }
+    },
+    "RouterPublicIP": {
+      "type": "string",
+      "metadata": {
+        "description": "Router Public IP Address"
+      }
+    },       
+    "location": {
+        "type": "string",
+        "metadata": {
+          "description": "Region of Resources"
+        }
+      }
+    },
+    "resources": [
+      {
+        "apiVersion": "2019-04-01",
+        "type": "Microsoft.Network/networkSecurityGroups",
+        "name": "[parameters('networkSecurityGroupName')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "securityRules": [
+            {
+              "name": "IKEv2",
+              "properties": {
+                "description": "Opens Port IKEv2 (Port 4500/UDP)",
+                "protocol": "UDP",
+                "sourcePortRange": "*",
+                "destinationPortRange": "4500",
+                "sourceAddressPrefix": "*",
+                "destinationAddressPrefix": "[parameters('RouterPublicIP')]",
+                "access": "Allow",
+                "priority": 1001,
+                "direction": "Inbound"
+              }
+            },
+            {
+              "name": "IKE",
+              "properties": {
+                "description": "Opens Port IKE (Port 500/UDP)",
+                "protocol": "UDP",
+                "sourcePortRange": "*",
+                "destinationPortRange": "500",
+                "sourceAddressPrefix": "*",
+                "destinationAddressPrefix": "[parameters('RouterPublicIP')]",
+                "access": "Allow",
+                "priority": 1002,
+                "direction": "Inbound"
+              }
+            }             
+          ]
+        }
+      }
+    ]
+  }

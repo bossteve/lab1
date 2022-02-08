@@ -1,0 +1,101 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "CMName": {
+            "type": "string",
+            "metadata": {
+                "description": "Connection Monitor Name"
+            }
+        },
+        "VM1ResourceGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "VM1 Resource Group"
+            }
+        },                        
+        "VM2ResourceGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "VM2 Resource Group"
+            }
+        },                                
+        "SourceVMName": {
+            "type": "string",
+            "metadata": {
+                "description": "Source VM Name"
+            }
+        },                                  
+        "DestinationVMName": {
+            "type": "string",
+            "metadata": {
+                "description": "Destination VM Name"
+            }
+        },                                   
+        "location": {
+            "type": "string",
+          "metadata": {
+            "description": "Region of Resources"
+          }
+        }                
+    },
+    "variables": { 
+
+        "SourceVMID": "[resourceId(parameters('VM1ResourceGroupName'), 'Microsoft.Compute/virtualMachines', parameters('SourceVMName'))]",                
+        "NWID": "[concat('NetworkWatcher_',parameters('location'), '/', parameters('CMName'))]",
+        "DestinationVMID": "[resourceId(parameters('VM2ResourceGroupName'), 'Microsoft.Compute/virtualMachines', parameters('DestinationVMName'))]",
+        "TestGroupName": "[concat(parameters('SourceVMName'),'-to-', parameters('DestinationVMName'))]"        
+      },      
+    "resources": [
+        {
+            "apiVersion": "2020-11-01",
+            "name": "[variables('NWID')]",
+            "location": "[parameters('location')]",
+            "type": "Microsoft.Network/networkWatchers/connectionMonitors",
+            "properties": {
+                "endpoints": [
+                    {
+                        "name": "[parameters('SourceVMName')]",
+                        "resourceId": "[variables('SourceVMID')]",
+                        "type": "AzureVM"
+                    },
+                    {
+                        "name": "[parameters('DestinationVMName')]",
+                        "resourceId": "[variables('DestinationVMID')]",
+                        "type": "AzureVM"
+                    }
+                ],
+                "testConfigurations": [
+                    {
+                        "name": "Web-Traffic",
+                        "testFrequencySec": 30,
+                        "protocol": "Tcp",
+                        "successThreshold": {
+                            "checksFailedPercent": 10,
+                            "roundTripTimeMs": 100
+                        },
+                        "tcpConfiguration": {
+                            "port": 80,
+                            "disableTraceRoute": false
+                        }
+                    }
+                ],
+                "testGroups": [
+                    {
+                        "name": "[variables('TestGroupName')]",
+                        "sources": [
+                            "[parameters('SourceVMName')]"
+                        ],
+                        "destinations": [
+                            "[parameters('DestinationVMName')]"
+                        ],
+                        "testConfigurations": [
+                            "Web-Traffic"
+                        ],
+                        "disable": false
+                    }
+                ]
+            }
+        }
+    ]
+}

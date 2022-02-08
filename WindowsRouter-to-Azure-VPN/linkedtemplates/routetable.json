@@ -1,0 +1,66 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "type": "string",
+            "metadata": {
+                "description": "VPN Gateway Name"
+              }
+        },
+        "SubnetPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Subnet Prefix"
+            }
+        },
+        "RemoteGatewayIP": {
+            "type": "string",
+            "metadata": {
+                "description": "Remote VPN Gateway IP"
+            }
+        },        
+        "location": {
+            "type": "string",
+            "metadata": {
+              "description": "Location for all resources."
+            }
+          }        
+    },   
+    "resources": [
+        {
+            "type": "Microsoft.Network/routeTables",
+            "apiVersion": "2020-11-01",
+            "name": "[parameters('name')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "disableBgpRoutePropagation": false,
+                "routes": [
+                    {
+                        "name": "Azure",
+                        "properties": {
+                            "addressPrefix": "[parameters('SubnetPrefix')]",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "[parameters('RemoteGatewayIP')]",
+                            "hasBgpOverride": false
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/routeTables/routes",
+            "apiVersion": "2020-11-01",
+            "name": "[concat(parameters('name'), '/Azure')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/routeTables', parameters('name'))]"
+            ],
+            "properties": {
+                "addressPrefix": "[parameters('SubnetPrefix')]",
+                "nextHopType": "VirtualAppliance",
+                "nextHopIpAddress": "[parameters('RemoteGatewayIP')]",
+                "hasBgpOverride": false
+            }
+        }        
+    ]
+}

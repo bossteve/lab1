@@ -1,0 +1,113 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "computerName": {
+            "type": "string",
+            "metadata": {
+                "description": "Computer Name"
+            }
+        },
+        "computerIP": {
+            "type": "string",
+            "metadata": {
+                "description": "Computer IP Address"
+            }
+        },     
+        "TimeZone": {
+            "type": "string",      
+            "metadata": {
+                "description": "Time Zone"
+            }
+        },                    
+        "AKSDNSZone": {
+            "type": "string",
+            "metadata": {
+                "description": "AKS Private DNS Zone"
+            }
+        },           
+        "InternalDomainName": {
+            "type": "string",
+            "metadata": {
+                "description": "OnPrem DNS Domain"
+            }
+        },        
+        "DC1IP": {
+            "type": "string",
+            "metadata": {
+                "description": "OnPrem DNS Server IP"
+            }
+        },                
+        "LocalDNSDomain": {
+            "type": "string",
+            "metadata": {
+                "description": "Local DNS Domain"
+            }
+        },   
+        "ReverseLookup": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of Reverse Lookup Zone Network ID"
+            }
+        },
+        "dnslastoctet": {
+            "type": "string",
+            "metadata": {
+                "description": "DNS Last IP Octet"
+            }
+        },                         
+        "location": {
+            "type": "string",
+          "metadata": {
+            "description": "Region of Resources"
+          }
+        },    
+        "_artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+            }
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Auto-generated token to access _artifactsLocation"
+            }
+        }                
+    },
+    "variables": {
+        "ModulesURL": "[uri(parameters('_artifactsLocation'), concat('DSC/CONFIGDNSPROXY.zip', parameters('_artifactsLocationSasToken')))]",
+        "ConfigurationFunction": "CONFIGDNSPROXY.ps1\\CONFIGDNSPROXY"
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('computerName'),'/Microsoft.Powershell.DSC')]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2019-03-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "publisher": "Microsoft.Powershell",
+                "type": "DSC",
+                "typeHandlerVersion": "2.19",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "ModulesUrl": "[variables('modulesUrl')]",
+                    "ConfigurationFunction": "[variables('configurationFunction')]",
+                        "Properties": {
+                            "computerName": "[parameters('computerName')]",
+                            "computerIP": "[parameters('computerIP')]",                            
+                            "TimeZone": "[parameters('TimeZone')]",                            
+                            "AKSDNSZone": "[parameters('AKSDNSZone')]",                                                        
+                            "InternalDomainName": "[parameters('InternalDomainName')]",                                                        
+                            "DC1IP": "[parameters('DC1IP')]",                                                                                                                                            
+                            "LocalDNSDomain": "[parameters('LocalDNSDomain')]",                                                        
+                            "ReverseLookup": "[parameters('ReverseLookup')]",
+                            "dnslastoctet": "[parameters('dnslastoctet')]"
+                        }
+                },
+                "protectedSettings": {
+                }                   
+            }
+        }
+    ]
+}

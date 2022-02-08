@@ -1,0 +1,585 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptiondeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ResourceGroup": {
+      "type": "string",
+      "defaultValue": "NSG-Flow1",
+      "metadata": {
+        "description": "Resource Groups"
+      }
+    },   
+    "FlowLogName": {
+      "type": "string",
+      "defaultValue": "NSG-Flow-Log-01",      
+      "metadata": {
+        "description": "Flow Log Name"
+      }
+    },          
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Administrator of the new VM and Domain"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password for the Administrator account of the new VM and Domain"
+      }
+    },    
+    "WindowsServerLicenseType": {
+      "type": "string",
+      "defaultValue": "None",
+      "allowedValues": [
+        "None",
+        "Windows_Server"
+      ],      
+      "metadata": {
+          "description": "Windows Server OS License Type"
+      }
+    },         
+    "NamingConvention": {
+      "type": "string",
+      "defaultValue": "khl",
+      "maxLength": 4,      
+      "metadata": {
+        "description": "Environment Naming Convention"
+      }
+    },                    
+    "vnet1ID": {
+      "type": "string",
+      "defaultValue": "10.1",
+      "metadata": {
+        "description": "VNet1 Prefix"
+      }
+    },    
+    "WEBOSVersion": {
+      "type": "string",
+      "defaultValue": "2019-Datacenter",
+      "allowedValues": [
+        "2019-Datacenter",
+        "2016-Datacenter"
+      ],
+      "metadata": {
+          "description": "Web Server OS Version"
+      }
+    }, 
+    "ToolsOSVersion": {
+      "type": "string",
+      "defaultValue": "2019-Datacenter",
+      "allowedValues": [
+        "2019-Datacenter",
+        "2016-Datacenter"
+      ],
+      "metadata": {
+          "description": "Tools Server OS Version"
+      }
+    },          
+    "WEBVMSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+          "description": "VM1 VMSize"
+      }
+    },    
+    "ToolsVMSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+          "description": "Tools VMSize"
+      }
+    },      
+    "UniqueID": {
+        "type": "string",
+        "defaultValue": "1234567890x1",
+        "metadata": {
+            "description": "Unique Identifier"
+        }
+    },                           
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+          "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+      },
+      "defaultValue": "[deployment().properties.templateLink.uri]"
+    },
+    "_artifactsLocationSasToken": {
+        "type": "securestring",
+        "metadata": {
+            "description": "Auto-generated token to access _artifactsLocation. Leave it blank unless you need to provide your own value."
+        },
+        "defaultValue": ""
+    }
+  },
+  "variables": { 
+    "vnet1Name": "[concat(parameters('NamingConvention'),'-VNet1')]",
+    "vnet1Prefix": "[concat(parameters('vnet1ID'),'.0.0/16')]",
+    "vnet1subnet1Name": "[concat(parameters('NamingConvention'),'-VNet1-Subnet1')]",    
+    "vnet1subnet1Prefix": "[concat(parameters('vnet1ID'),'.1.0/24')]",    
+    "vnet1subnet2Name": "[concat(parameters('NamingConvention'),'-VNet1-Subnet2')]",   
+    "vnet1subnet2Prefix": "[concat(parameters('vnet1ID'),'.2.0/24')]",    
+    "vnet1BastionsubnetPrefix": "[concat(parameters('vnet1ID'),'.253.0/24')]",        
+    "webname": "[concat(parameters('NamingConvention'),'-web-01')]",           
+    "webIP": "[concat(parameters('vnet1ID'),'.1.',variables('weblastoctet'))]",        
+    "weblastoctet": "101", 
+    "toolslastoctet": "150",                  
+    "Toolsname": "[concat(parameters('NamingConvention'),'-tool-01')]",                      
+    "ToolsIP": "[concat(parameters('vnet1ID'),'.2.',variables('toolslastoctet'))]",            
+    "NSGName": "[concat(parameters('NamingConvention'),'-nsg')]",   
+    "StorageAccountName": "[concat(parameters('NamingConvention'), parameters('UniqueID'))]"
+  },  
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateRG",
+      "location": "[deployment().location]",              
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/resourcegroup.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "ResourceGroupName": {
+                  "value": "[parameters('ResourceGroup')]"
+              },
+              "location": {
+                  "value": "[deployment().Location]"
+              }            
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateStorage",   
+      "resourceGroup":  "[parameters('ResourceGroup')]",    
+      "dependsOn": [
+        "CreateRG"
+      ],               
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/storage.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "StorageAccountName": {
+                  "value": "[variables('StorageAccountName')]"
+              },       
+              "location": {
+                  "value": "[deployment().location]"
+              }          
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployNSG",
+      "resourceGroup":  "[parameters('ResourceGroup')]",            
+      "dependsOn": [
+        "CreateRG"
+      ],            
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/NetworkSecurityGroup.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "NetworkSecurityGroupname": {
+                  "value": "[variables('NSGName')]"
+              },                                                                                                      
+              "PrivateIP": {
+                  "value": "[variables('webIP')]"
+              },                                                                                                      
+              "location": {
+                  "value": "[deployment().location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployNSGFlowSolution",
+      "resourceGroup":  "NetworkWatcherRG",            
+      "dependsOn": [
+        "CreateStorage",
+        "DeployNSG"
+      ],
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/NSGFlow.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "ResourceGroup": {
+                  "value": "[parameters('ResourceGroup')]"
+              },
+              "FlowLogName": {
+                  "value": "[parameters('FlowLogName')]"
+              },
+              "NSGName": {
+                  "value": "[variables('NSGName')]"
+              },              
+              "StorageAccountName": {
+                  "value": "[variables('StorageAccountName')]"
+              },  
+              "location": {
+                  "value": "[deployment().location]"
+              }        
+          }
+      }
+    },     
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "VNet1",
+      "resourceGroup":  "[parameters('ResourceGroup')]",  
+      "dependsOn": [
+        "CreateRG"
+      ],            
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/vnet.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "vnetName": {
+                  "value": "[variables('vnet1Name')]"
+              },
+              "vnetprefix": {
+                  "value": "[variables('vnet1Prefix')]"
+              },
+              "subnet1Name": {
+                  "value": "[variables('vnet1subnet1Name')]"
+              },
+              "subnet1Prefix": {
+                  "value": "[variables('vnet1subnet1Prefix')]"
+              },
+              "subnet2Name": {
+                "value": "[variables('vnet1subnet2Name')]"
+              },
+              "subnet2Prefix": {
+                "value": "[variables('vnet1subnet2Prefix')]"
+              },              
+              "BastionsubnetPrefix": {
+                "value": "[variables('vnet1BastionsubnetPrefix')]"
+              },              
+              "location": {
+                  "value": "[deployment().location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "BastionHost1",
+      "resourceGroup":  "[parameters('ResourceGroup')]",                
+      "dependsOn": [
+        "VNet1"
+      ],
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/bastionhost.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "publicIPAddressName": {
+                "value": "[concat(variables('vnet1Name'),'-Bastion-pip')]"
+              },
+              "AllocationMethod": {
+                "value": "Static"
+              },              
+              "vnetName": {
+                  "value": "[variables('vnet1Name')]"
+              },
+              "subnetName": {
+                  "value": "AzureBastionSubnet"
+              },
+              "location": {
+                  "value": "[deployment().location]"
+              }
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "deployWEBVM",
+      "resourceGroup":  "[parameters('ResourceGroup')]",               
+      "dependsOn": [
+        "VNet1"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/1nic-1disk-vm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('webname')]"
+              },
+              "computerIP": {
+                  "value": "[variables('webIP')]"
+              },
+              "Publisher": {
+                  "value": "MicrosoftWindowsServer"
+              },
+              "Offer": {
+                  "value": "WindowsServer"
+              },
+              "OSVersion": {
+                "value": "[parameters('WEBOSVersion')]"
+              },              
+              "LicenseType": {
+                "value": "[parameters('WindowsServerLicenseType')]"
+              },           
+              "VMSize": {
+                "value": "[parameters('WEBVMSize')]"
+              },
+              "vnetName": {
+                "value": "[variables('vnet1Name')]"
+              },            
+              "subnetName": {
+                "value": "[variables('vnet1subnet1Name')]"
+              },            
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },                                                                                                                                        
+              "location": {
+                  "value": "[deployment().location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "InstallIIS",
+      "resourceGroup":  "[parameters('ResourceGroup')]",                           
+      "dependsOn": [
+        "deployWEBVM"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/iis.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('webname')]"
+              },           
+              "location": {
+                  "value": "[deployment().location]"
+              },                                          
+              "_artifactsLocation": {
+                "value": "[parameters('_artifactsLocation')]"
+              },                                                                                                            
+              "_artifactsLocationSasToken": {
+                "value": "[parameters('_artifactsLocationSasToken')]"
+              }                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "deployToolsVM",
+      "resourceGroup":  "[parameters('ResourceGroup')]",                     
+      "dependsOn": [
+        "VNet1"
+      ],                  
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/1nic-1disk-vm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('Toolsname')]"
+              },
+              "computerIP": {
+                  "value": "[variables('ToolsIP')]"
+              },
+              "Publisher": {
+                  "value": "MicrosoftWindowsServer"
+              },
+              "Offer": {
+                  "value": "WindowsServer"
+              },
+              "OSVersion": {
+                "value": "[parameters('ToolsOSVersion')]"
+              },              
+              "LicenseType": {
+                "value": "[parameters('WindowsServerLicenseType')]"
+              },   
+              "VMSize": {
+                "value": "[parameters('ToolsVMSize')]"
+              },
+              "vnetName": {
+                "value": "[variables('vnet1Name')]"
+              },            
+              "subnetName": {
+                "value": "[variables('vnet1subnet2Name')]"
+              },            
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },                                                                                                                                        
+              "location": {
+                  "value": "[deployment().location]"
+              }
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "InstallPowerBiDesktop",
+      "resourceGroup":  "[parameters('ResourceGroup')]",                           
+      "dependsOn": [
+        "deployToolsVM"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/powerbidesktop.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('Toolsname')]"
+              },           
+              "location": {
+                  "value": "[deployment().location]"
+              },                                          
+              "_artifactsLocation": {
+                "value": "[parameters('_artifactsLocation')]"
+              },                                                                                                            
+              "_artifactsLocationSasToken": {
+                "value": "[parameters('_artifactsLocationSasToken')]"
+              }                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "updatevnet1nsg",
+      "resourceGroup":  "[parameters('ResourceGroup')]",                     
+      "dependsOn": [
+        "DeployNSG",
+        "VNet1"
+      ],            
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/updatevnetnsg.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "vnetName": {
+                  "value": "[variables('vnet1Name')]"
+              },
+              "vnetprefix": {
+                  "value": "[variables('vnet1Prefix')]"
+              },
+              "subnet1Name": {
+                "value": "[variables('vnet1subnet1Name')]"
+              },                                                                                                            
+              "subnet1Prefix": {
+                "value": "[variables('vnet1subnet1Prefix')]"
+              }, 
+              "subnet2Name": {
+                "value": "[variables('vnet1subnet2Name')]"
+              },                                                                                                            
+              "subnet2Prefix": {
+                "value": "[variables('vnet1subnet2Prefix')]"
+              },               
+              "BastionsubnetPrefix": {
+                "value": "[variables('vnet1BastionsubnetPrefix')]"
+              },                         
+              "NetworkSecurityGroupname": {
+                  "value": "[variables('NSGName')]"
+              },                                                                                                                                                                                                                              
+              "location": {
+                  "value": "[deployment().location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "addwebpip",
+      "resourceGroup":  "[parameters('ResourceGroup')]",                     
+      "dependsOn": [
+        "DeployNSG",
+        "VNet1",
+        "updatevnet1nsg"
+      ],            
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/1nic-1disk-vm-pip.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('webname')]"
+              },
+              "computerIP": {
+                  "value": "[variables('webIP')]"
+              },
+              "Publisher": {
+                  "value": "MicrosoftWindowsServer"
+              },
+              "Offer": {
+                  "value": "WindowsServer"
+              },
+              "OSVersion": {
+                "value": "[parameters('WEBOSVersion')]"
+              },              
+              "LicenseType": {
+                "value": "[parameters('WindowsServerLicenseType')]"
+              },     
+              "VMSize": {
+                "value": "[parameters('WEBVMSize')]"
+              },
+              "vnetName": {
+                "value": "[variables('vnet1Name')]"
+              },            
+              "subnetName": {
+                "value": "[variables('vnet1subnet1Name')]"
+              },            
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },                                                                                                                                        
+              "location": {
+                  "value": "[deployment().location]"
+              }
+          }
+      }
+    }                                                                                                                                                                                                                                         
+  ]
+}

@@ -1,0 +1,29 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptiondeploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "ResourceGroupName": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the ResourceGroup"
+        }
+      },
+      "location": {
+          "type": "string",
+        "metadata": {
+          "description": "Region of Resources"
+        }
+      }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/resourceGroups",
+            "apiVersion": "2020-06-01",
+            "name": "[parameters('ResourceGroupName')]",
+            "location": "[parameters('location')]",
+            "tags": {
+            },
+            "properties": {}
+        }
+    ]
+  }

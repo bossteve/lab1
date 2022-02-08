@@ -1,0 +1,64 @@
+{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "ResourceGroup": {
+        "type": "string",
+        "metadata": {
+            "description": "Resource Group"
+          }
+    },
+    "FlowLogName": {
+        "type": "string",
+        "metadata": {
+            "description": "Solution Type"
+          }
+    },
+    "NSGName": {
+        "type": "string",
+        "metadata": {
+            "description": "Solution Type"
+          }
+    },    
+    "StorageAccountName": {
+        "type": "string",
+        "metadata": {
+            "description": "Specifies Subscription ID."
+          }
+    },
+    "location": {
+        "type": "string",
+        "metadata": {
+          "description": "Specifies the location in which to create the workspace."
+        }
+    }
+},
+    "variables": {
+      "NSGResourceID": "[resourceId(parameters('ResourceGroup'), 'Microsoft.Network/networkSecurityGroups', parameters('NSGName'))]",
+      "StorageAccountResourceID": "[resourceId(parameters('ResourceGroup'), 'Microsoft.Storage/storageAccounts', parameters('StorageAccountName'))]",
+      "NetworkWatcherName": "[concat('NetworkWatcher_', parameters('location'))]",
+      "NSGFlowName": "[concat(variables('NetworkWatcherName'), '/', parameters('FlowLogName'))]"               
+    },
+"resources": [
+    {
+        "name": "[variables('NSGFlowName')]",
+        "type": "Microsoft.Network/networkWatchers/flowLogs",
+        "apiVersion": "2019-11-01",
+        "location": "[parameters('location')]",          
+        "tags": {},
+        "properties": {
+            "targetResourceId": "[variables('NSGResourceID')]",
+            "storageId": "[variables('StorageAccountResourceID')]",
+            "enabled": true,
+            "retentionPolicy": {
+                "days": 5,
+                "enabled": true
+            },
+            "format": {
+                "type": "JSON",
+                "version": 2
+            }
+        }
+    }
+   ]
+}

@@ -1,0 +1,42 @@
+{
+    "$schema":"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion":"1.0.0.0",
+    "parameters":{  
+        "Location":{  
+            "type":"string"
+        },
+        "KeyVaultName": {
+            "type": "string"
+        },
+        "KeyVaultKeyUrl": {
+            "type": "string"
+        },               
+        "DEDESName": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "KeyVaultId": "[resourceId(resourceGroup().name, 'Microsoft.KeyVault/vaults', parameters('KeyVaultName'))]"
+    },    
+    "resources":[  
+       {  
+        "type":"Microsoft.Compute/diskEncryptionSets",
+        "name":"[parameters('DEDESName')]",
+        "apiVersion":"2020-05-01",          
+        "location": "[parameters('Location')]",
+        "identity": { 
+            "type": "SystemAssigned"
+            },
+        "properties":{  
+            "activeKey":{
+            "sourceVault": {
+                "id": "[variables('keyVaultId')]"
+            },
+            "keyUrl": "[parameters('KeyVaultKeyUrl')]"
+            },
+            "encryptionType": "EncryptionAtRestWithPlatformAndCustomerKeys"
+
+            }
+        }
+    ]           
+}

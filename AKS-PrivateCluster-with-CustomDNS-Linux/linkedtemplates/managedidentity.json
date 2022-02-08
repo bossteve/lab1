@@ -1,0 +1,36 @@
+{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "ManagedIDName": {
+      "type": "string",
+      "metadata": {
+        "description": "Managed ID Name"
+      }
+    },
+    "location": {
+        "type": "string",
+      "metadata": {
+        "description": "Region of Resources"
+      }
+  }
+},
+"resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "name": "[parameters('ManagedIDName')]",
+      "apiVersion": "2018-11-30",
+      "location": "[parameters('location')]"
+    }
+  ],
+"outputs": {
+    "principalId": {
+        "type": "string",
+        "value": "[reference(resourceId(resourceGroup().name, 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('ManagedIDName'))).principalId]"
+    },
+    "clientId": {
+        "type": "string",
+        "value": "[reference(resourceId(resourceGroup().name, 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('ManagedIDName'))).clientId]"
+    }    
+  }      
+}

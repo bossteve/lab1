@@ -1,0 +1,64 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "computerName": {
+            "type": "string",
+            "metadata": {
+                "description": "Computer Name"
+            }
+        },
+        "vnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Existing VNET Name that contains the domain controller"
+            }
+        },
+        "subnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Existing subnet name that contains the domain controller"
+          }
+        },        
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "Region of Resources"
+            }
+        }
+    },
+    "variables": {
+        "NicName": "[concat(parameters('computerName'),'-nic')]",
+        "subnetId": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"      ,
+        "publicIPAddressName": "[concat(parameters('computerName'),'-pip')]"                
+    },
+    "resources": [
+        {
+            "name": "[variables('NicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2018-11-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId ('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
+                                },                            
+                            "subnet": {
+                                "id": "[variables('subnetId')]"
+                            }                            
+                        }
+                    }
+                ],
+                "dnsSettings": {
+                    "dnsServers": [
+                        "168.63.129.16"
+                    ]
+                }                
+            }
+        }
+    ]
+}

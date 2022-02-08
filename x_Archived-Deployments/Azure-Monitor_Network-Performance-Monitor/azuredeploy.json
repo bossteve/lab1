@@ -1,0 +1,638 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Location2": {
+      "type": "string",
+      "defaultValue": "WestUS",
+      "metadata": {
+        "description": "Choose Region (Example: WestUS)"
+      }
+    },    
+    "WorkspaceLocation": {
+      "type": "string",
+      "defaultValue": "EastUS",
+      "metadata": {
+        "description": "Choose a Log Analytics Workspace Location"
+      }
+    },        
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Administrator of the new VM and Domain"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password for the Administrator account of the new VM and Domain"
+      }
+    },    
+    "WindowsServerLicenseType": {
+      "type": "string",
+      "defaultValue": "None",
+      "allowedValues": [
+        "None",
+        "Windows_Server"
+      ],      
+      "metadata": {
+          "description": "Windows Server OS License Type"
+      }
+    },      
+    "NamingConvention": {
+      "type": "string",
+      "defaultValue": "khl",
+      "maxLength": 4,      
+      "metadata": {
+        "description": "Environment Naming Convention"
+      }
+    },                    
+    "vnet1ID": {
+      "type": "string",
+      "defaultValue": "10.1",
+      "metadata": {
+        "description": "VNet1 Prefix"
+      }
+    },    
+    "vnet2ID": {
+      "type": "string",
+      "defaultValue": "10.2",
+      "metadata": {
+        "description": "VNet1 Prefix"
+      }
+    },           
+    "VM1OSVersion": {
+      "type": "string",
+      "defaultValue": "2019-Datacenter",
+      "allowedValues": [
+        "2019-Datacenter",
+        "2016-Datacenter"
+      ],
+      "metadata": {
+          "description": "VM1 OS Version"
+      }
+    },    
+    "VM2OSVersion": {
+      "type": "string",
+      "defaultValue": "2019-Datacenter",
+      "allowedValues": [
+        "2019-Datacenter",
+        "2016-Datacenter"
+      ],
+      "metadata": {
+          "description": "VM2 OS Version"
+      }
+    },    
+    "VM1VMSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+          "description": "VM1 VMSize"
+      }
+    },            
+    "VM2VMSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+          "description": "VM2 VMSize"
+      }
+    },   
+    "roleAssignmentGuid": {
+        "type": "string",
+        "defaultValue": "[newGuid()]",
+        "metadata": {
+            "description": "A new GUID used to identify the role assignment"
+        }
+    },                
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+          "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+      },
+      "defaultValue": "[deployment().properties.templateLink.uri]"
+    },
+    "_artifactsLocationSasToken": {
+        "type": "securestring",
+        "metadata": {
+            "description": "Auto-generated token to access _artifactsLocation. Leave it blank unless you need to provide your own value."
+        },
+        "defaultValue": ""
+    }
+  },
+  "variables": { 
+    "vnet1Name": "[concat(parameters('NamingConvention'),'-VNet1')]",
+    "vnet1Prefix": "[concat(parameters('vnet1ID'),'.0.0/16')]",
+    "vnet1subnet1Name": "[concat(parameters('NamingConvention'),'-VNet1-Subnet1')]",    
+    "vnet1subnet1Prefix": "[concat(parameters('vnet1ID'),'.1.0/24')]",    
+    "vnet1subnet2Name": "[concat(parameters('NamingConvention'),'-VNet1-Subnet2')]",   
+    "vnet1subnet2Prefix": "[concat(parameters('vnet1ID'),'.2.0/24')]",    
+    "vnet1BastionsubnetPrefix": "[concat(parameters('vnet1ID'),'.253.0/24')]",        
+    "vnet2Name": "[concat(parameters('NamingConvention'),'-VNet2')]",    
+    "vnet2Prefix": "[concat(parameters('vnet2ID'),'.0.0/16')]",
+    "vnet2subnet1Name": "[concat(parameters('NamingConvention'),'-VNet2-Subnet1')]",   
+    "vnet2subnet1Prefix": "[concat(parameters('vnet2ID'),'.1.0/24')]",    
+    "vnet2subnet2Name": "[concat(parameters('NamingConvention'),'-VNet2-Subnet2')]",    
+    "vnet2subnet2Prefix": "[concat(parameters('vnet2ID'),'.2.0/24')]",    
+    "vnet2BastionsubnetPrefix": "[concat(parameters('vnet2ID'),'.253.0/24')]",        
+    "vm1name": "[concat(parameters('NamingConvention'),'-vm-01')]",           
+    "vm1IP": "[concat(parameters('vnet1ID'),'.1.',variables('vm1lastoctet'))]",        
+    "vm2name": "[concat(parameters('NamingConvention'),'-vm-02')]",           
+    "vm2IP": "[concat(parameters('vnet2ID'),'.1.',variables('vm2lastoctet'))]",            
+    "vm1lastoctet": "101",        
+    "vm2lastoctet": "101",        
+    "WorkSpaceName": "[concat(parameters('NamingConvention'),'-LAW-',uniqueString(resourceGroup().id))]",
+    "SubscriptionID": "[subscription().SubscriptionId]",
+    "ManagedIDName": "[concat(parameters('NamingConvention'),'-ManagedID-',uniqueString(resourceGroup().id))]",
+    "Contributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"
+    
+    
+  },  
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "DeployNPM",
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/NetworkPerformanceMonitor.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "resourceGroupName": {
+                  "value": "[resourceGroup().Name]"
+              },
+              "workspaceName": {
+                  "value": "[variables('WorkSpaceName')]"
+              },
+              "solutionTypes": {
+                  "value": ["NetworkMonitoring"]
+              },              
+              "subscriptionID": {
+                  "value": "[variables('SubscriptionID')]"
+              },
+              "location": {
+                  "value": "[parameters('WorkspaceLocation')]"
+              },
+              "sku": {
+                  "value": "Free"
+              }            
+          }
+      }
+    },     
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "VNet1",
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/vnet.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "vnetName": {
+                  "value": "[variables('vnet1Name')]"
+              },
+              "vnetprefix": {
+                  "value": "[variables('vnet1Prefix')]"
+              },
+              "subnet1Name": {
+                  "value": "[variables('vnet1subnet1Name')]"
+              },
+              "subnet1Prefix": {
+                  "value": "[variables('vnet1subnet1Prefix')]"
+              },
+              "subnet2Name": {
+                "value": "[variables('vnet1subnet2Name')]"
+              },
+              "subnet2Prefix": {
+                "value": "[variables('vnet1subnet2Prefix')]"
+              },              
+              "BastionsubnetPrefix": {
+                "value": "[variables('vnet1BastionsubnetPrefix')]"
+              },              
+              "location": {
+                  "value": "[resourceGroup().location]"
+              }
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "VNet2",    
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/vnet.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "vnetName": {
+                  "value": "[variables('vnet2Name')]"
+              },
+              "vnetprefix": {
+                  "value": "[variables('vnet2Prefix')]"
+              },
+              "subnet1Name": {
+                  "value": "[variables('vnet2subnet1Name')]"
+              },
+              "subnet1Prefix": {
+                  "value": "[variables('vnet2subnet1Prefix')]"
+              },
+              "subnet2Name": {
+                "value": "[variables('vnet2subnet2Name')]"
+              },
+              "subnet2Prefix": {
+                "value": "[variables('vnet2subnet2Prefix')]"
+              },              
+              "BastionsubnetPrefix": {
+                "value": "[variables('vnet2BastionsubnetPrefix')]"
+              },              
+              "location": {
+                  "value": "[parameters('Location2')]"
+              }
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "BastionHost1",
+      "dependsOn": [
+        "VNet1"
+      ],
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/bastionhost.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "publicIPAddressName": {
+                "value": "[concat(variables('vnet1Name'),'-Bastion-pip')]"
+              },
+              "AllocationMethod": {
+                "value": "Static"
+              },              
+              "vnetName": {
+                  "value": "[variables('vnet1Name')]"
+              },
+              "subnetName": {
+                  "value": "AzureBastionSubnet"
+              },
+              "location": {
+                  "value": "[resourceGroup().location]"
+              }
+          }
+      }
+    },                    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "BastionHost2",
+      "dependsOn": [
+        "VNet2"
+      ],
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/bastionhost.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "publicIPAddressName": {
+                "value": "[concat(variables('vnet2Name'),'-Bastion-pip')]"
+              },
+              "AllocationMethod": {
+                "value": "Static"
+              },              
+              "vnetName": {
+                  "value": "[variables('vnet2Name')]"
+              },
+              "subnetName": {
+                  "value": "AzureBastionSubnet"
+              },
+              "location": {
+                  "value": "[parameters('Location2')]"
+              }
+          }
+      }
+    },            
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "deployVNet1VM",
+      "dependsOn": [
+        "VNet1"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/1nic-1disk-vm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('vm1name')]"
+              },
+              "computerIP": {
+                  "value": "[variables('vm1IP')]"
+              },
+              "Publisher": {
+                  "value": "MicrosoftWindowsServer"
+              },
+              "Offer": {
+                  "value": "WindowsServer"
+              },
+              "OSVersion": {
+                "value": "[parameters('VM1OSVersion')]"
+              },              
+              "LicenseType": {
+                "value": "[parameters('WindowsServerLicenseType')]"
+              },           
+              "VMSize": {
+                "value": "[parameters('VM1VMSize')]"
+              },
+              "vnetName": {
+                "value": "[variables('vnet1Name')]"
+              },            
+              "subnetName": {
+                "value": "[variables('vnet1subnet1Name')]"
+              },            
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },                                                                                                                                        
+              "location": {
+                  "value": "[resourceGroup().location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "deployVNet2VM",
+      "dependsOn": [
+        "VNet2"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/1nic-1disk-vm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('vm2name')]"
+              },
+              "computerIP": {
+                  "value": "[variables('vm2IP')]"
+              },
+              "Publisher": {
+                  "value": "MicrosoftWindowsServer"
+              },
+              "Offer": {
+                  "value": "WindowsServer"
+              },
+              "OSVersion": {
+                "value": "[parameters('VM2OSVersion')]"
+              },              
+              "LicenseType": {
+                "value": "[parameters('WindowsServerLicenseType')]"
+              },            
+              "VMSize": {
+                "value": "[parameters('VM2VMSize')]"
+              },
+              "vnetName": {
+                "value": "[variables('vnet2Name')]"
+              },            
+              "subnetName": {
+                "value": "[variables('vnet2subnet1Name')]"
+              },            
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },                                                                                                                                        
+              "location": {
+                  "value": "[parameters('Location2')]"
+              }
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "PeeringToSite2",
+      "dependsOn": [
+        "VNet1",
+        "VNet2"
+      ],            
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/peering.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "SourceVNetName": {
+                "value": "[variables('vnet1Name')]"
+              },
+              "TargetVNetName": {
+                "value": "[variables('vnet2Name')]"
+              },              
+              "allowVirtualNetworkAccess": {
+                "value": "true"
+              },                                                                                                                                                                                                                                                                                                           
+              "allowForwardedTraffic": {
+                "value": "true"
+              },                                                                                                                                                                                                                                                                                                           
+              "allowGatewayTransit": {
+                "value": "false"
+              },
+              "useRemoteGateways": {
+                "value": "false"
+              },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+              "location": {
+                  "value": "[resourceGroup().location]"
+              }
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "PeeringToSite1",
+      "dependsOn": [
+        "VNet1",
+        "VNet2",        
+        "PeeringToSite2"
+      ],            
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/peering.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "SourceVNetName": {
+                "value": "[variables('vnet2Name')]"
+              },
+              "TargetVNetName": {
+                "value": "[variables('vnet1Name')]"
+              },              
+              "allowVirtualNetworkAccess": {
+                "value": "true"
+              },                                                                                                                                                                                                                                                                                                           
+              "allowForwardedTraffic": {
+                "value": "true"
+              },                                                                                                                                                                                                                                                                                                           
+              "allowGatewayTransit": {
+                "value": "false"
+              },
+              "useRemoteGateways": {
+                "value": "false"
+              },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+              "location": {
+                  "value": "[parameters('Location2')]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "CreateManagedID",
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/managedidentity.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "ManagedIDName": {
+                  "value": "[variables('ManagedIDName')]"
+              },
+              "location": {
+                  "value": "[resourceGroup().location]"
+              }
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "AssignManagedID",
+      "dependsOn": [
+        "CreateManagedID"
+      ],        
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/roleassignment.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "PrincipalID": {
+                  "value": "[reference('CreateManagedID').outputs.manageduseridentity.value]"
+              },
+              "RoleDefinitionID": {
+                  "value": "[variables('Contributor')]"
+              },
+              "roleAssignmentGuid": {
+                  "value": "[parameters('roleAssignmentGuid')]"
+              }              
+          }
+      }
+    },    
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "ConnectVM1",
+      "dependsOn": [
+        "DeployNPM",
+        "deployVNet1VM",
+        "CreateManagedID",
+        "AssignManagedID"        
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/connectnpm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "vm": {
+                  "value": "[variables('vm1name')]"
+              },
+              "workspaceName": {
+                  "value": "[variables('WorkSpaceName')]"
+              },
+              "VMResourceGroupName": {
+                  "value": "[resourceGroup().Name]"
+              },       
+              "WorkspaceResourceGroup": {
+                  "value": "[resourceGroup().Name]"
+              },              
+              "ManagedIDName": {
+                  "value": "[variables('ManagedIDName')]"
+              },                            
+              "ScriptLocation": {
+                  "value": "[resourceGroup().location]"
+              },                                          
+              "Location": {
+                  "value": "[resourceGroup().location]"
+              }                            
+          }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "ConnectVM2",
+      "dependsOn": [
+        "DeployNPM",
+        "deployVNet2VM",        
+        "CreateManagedID",
+        "AssignManagedID",
+        "ConnectVM1"
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/connectnpm.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "vm": {
+                  "value": "[variables('vm2name')]"
+              },
+              "workspaceName": {
+                  "value": "[variables('WorkSpaceName')]"
+              },
+              "VMResourceGroupName": {
+                  "value": "[resourceGroup().Name]"
+              },       
+              "WorkspaceResourceGroup": {
+                  "value": "[resourceGroup().Name]"
+              },
+              "ManagedIDName": {
+                  "value": "[variables('ManagedIDName')]"
+              },
+              "ScriptLocation": {
+                  "value": "[resourceGroup().location]"
+              },                                         
+              "Location": {
+                  "value": "[parameters('Location2')]"
+              }                            
+          }
+      }
+    }           
+  ]
+}

@@ -1,0 +1,36 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "RSVaultName": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the Recovery Services Vault"
+        }
+      },
+      "location": {
+          "type": "string",
+        "metadata": {
+          "description": "Region of Resources"
+        }
+      }
+    },
+  "variables": {
+    "skuName":  "Standard"
+  },    
+    "resources": [
+        {
+            "type": "Microsoft.RecoveryServices/vaults",
+            "apiVersion": "2016-06-01",
+            "name": "[parameters('RSVaultName')]",
+            "location": "[parameters('location')]",
+            "tags": {
+            },
+            "properties": {},
+            "sku": {
+                "name": "RS0",
+                "tier": "[variables('skuName')]"          
+            }
+        }        
+    ]
+  }

@@ -1,0 +1,24 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "NameServer1": {
+            "type": "string",
+            "metadata": {
+                "description": "Public DNS Zone Name Server 1"
+            }
+        }       
+    },
+
+    "resources": [
+        {
+            "name": "testip1",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2018-11-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "Static"
+            }
+        }
+    ]
+}

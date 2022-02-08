@@ -1,0 +1,35 @@
+{
+    "type": "Microsoft.Resources/deployments",
+    "apiVersion": "2019-10-01",
+    "name": "ConfigureHyperV",
+    "dependsOn": [
+      "DeployHVVM"
+    ],
+    "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+            "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/HyperV.json', parameters('_artifactsLocationSasToken')))]",
+            "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+            "computerName": {
+                "value": "[variables('hvname')]"
+            },
+            "location": {
+                "value": "[resourceGroup().location]"
+            },                                          
+            "HyperVNATIP": {
+              "value": "[ variables('HyperVNATIP')]"
+            },                                                                                                            
+            "HyperVSubnetPrefix": {
+              "value": "[variables('HyperVsubnetPrefix')]"
+            },              
+            "_artifactsLocation": {
+              "value": "[parameters('_artifactsLocation')]"
+            },                                                                                                            
+            "_artifactsLocationSasToken": {
+              "value": "[parameters('_artifactsLocationSasToken')]"
+            }                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+        }
+    }
+  }

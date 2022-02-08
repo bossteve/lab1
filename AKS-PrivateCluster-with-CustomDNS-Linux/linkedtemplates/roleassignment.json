@@ -1,0 +1,37 @@
+{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "PrincipalID": {
+      "type": "string",
+      "metadata": {
+        "description": "Account being assigned the rights"
+      }
+    },
+    "RoleDefinitionID": {
+      "type": "string",
+      "metadata": {
+        "description": "Role Definition ID"
+      }
+    },
+    "roleAssignmentGuid": {
+      "type": "string",
+      "metadata": {
+        "description": "A new GUID used to identify the role assignment"
+      }
+    }         
+},
+"resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2018-09-01-preview",
+      "name": "[parameters('roleAssignmentGuid')]",
+      "properties": {
+        "roleDefinitionId": "[parameters('RoleDefinitionId')]",
+        "principalId": "[parameters('PrincipalID')]",
+        "principalType": "ServicePrincipal",
+        "scope": "[resourceGroup().id]"
+      }
+    }
+  ]
+}

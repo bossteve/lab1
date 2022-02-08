@@ -1,0 +1,75 @@
+{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "VM": {
+      "type": "string",
+      "metadata": {
+        "description": "VM Name"
+      }
+    },
+    "WorkspaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Log Analytics Workspace Name"
+      }
+    },    
+    "WorkspaceResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "Worksapce Resource Group"
+      }
+    },
+    "VMResourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "VM Resource Group"
+      }
+    },        
+    "ManagedIDName": {
+      "type": "string",
+      "metadata": {
+        "description": "ManagedID"
+      }
+    },
+    "ScriptLocation": {
+        "type": "string",
+      "metadata": {
+        "description": "Region of Resources"
+      }
+    },    
+    "location": {
+        "type": "string",
+      "metadata": {
+        "description": "Region of Resources"
+      }
+    }
+},
+"variables": {
+    "ScriptURL": "https://raw.githubusercontent.com/elliottfieldsjr/KillerHomeLab/master/Azure-Monitor_Network-Performance-Monitor/Scripts/ConnectToWorkspace.ps1"
+},
+"resources": [
+    {
+      "type": "Microsoft.Resources/deploymentScripts",
+      "apiVersion": "2019-10-01-preview",
+      "name": "ConnectToWorkspace",
+      "location": "[parameters('ScriptLocation')]",
+      "kind": "AzurePowerShell",      
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('ManagedIDName'))]": {
+          }
+        }
+      },
+      "properties": {
+        "azPowerShellVersion": "3.0",
+        "timeout": "PT1H",
+        "arguments": "[format(' -VM {0} -WorkspaceName {1} -WorkspaceResourceGroup {2} -VMResourceGroup {3} -Location {4}', parameters('VM'), parameters('WorkspaceName'), parameters('WorkspaceResourceGroup'), parameters('VMResourceGroupName'), parameters('location'))]", // can pass an argument string, double quotes must be escaped
+        "primaryScriptUri": "[variables('ScriptURL')]",
+        "cleanupPreference": "OnSuccess",
+        "retentionInterval": "P1D"
+      }
+    }
+  ]
+}
