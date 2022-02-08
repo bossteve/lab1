@@ -182,7 +182,7 @@
     },
     "Exchange2016ISOUrl": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "https://download.microsoft.com/download/f/0/e/f0e65686-3761-4c9d-b8b2-9fb71a207b8d/ExchangeServer2016-x64-CU22.ISO",
       "metadata": {
         "description": "Enter a valid URL that points to the Exchange 2016 CU .ISO"
       }
@@ -278,7 +278,8 @@
         "us",
         "tk",
         "ml",
-        "local"
+        "local",
+        "toys"
       ],      
       "metadata": {
           "description": "Internal Top-Level Domain Name"
@@ -303,7 +304,8 @@
         "mil",
         "us",
         "tk",
-        "ml"
+        "ml",
+        "toys"
       ],      
       "metadata": {
           "description": "External Top-Level Domain Name"
