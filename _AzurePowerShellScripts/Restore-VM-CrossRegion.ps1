@@ -71,7 +71,7 @@ Start-Sleep 60}
 
 # Gather Restore Job Details
 $restorejob = Get-AzRecoveryServicesBackupJob -Job $restorejob
-$details = Get-AzRecoveryServicesBackupJobDetails -Job $restorejob
+$details = Get-AzRecoveryServicesBackupJobDetail -Job $restorejob
 $properties = $details.properties
 $srcCN = $properties["Config Blob Container Name"]
 $blobName = $properties["Config Blob Name"]

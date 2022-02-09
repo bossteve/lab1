@@ -180,6 +180,17 @@
         "description": "Enter an Exchange Organization Name"
       }
     },
+      "CU22": {
+      "type": "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],      
+      "metadata": {
+          "description": "Are you deploying Exchange 2016 CU22"
+      }
+    }, 
     "Exchange2016ISOUrl": {
       "type": "string",
       "defaultValue": "",
@@ -2021,6 +2032,7 @@
       }
     },                                                                                  
     {
+      "condition": "[equals(parameters('CU22'),'No')]",            
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-10-01",
       "name": "prepareadexchange16",
@@ -2068,6 +2080,54 @@
       }
     },     
     {
+      "condition": "[equals(parameters('CU22'),'Yes')]",            
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "prepareadexchange16-cu22",
+      "dependsOn": [
+        "restartex1-1"       
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/prepareadexchange1622.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('ex1name')]"
+              },
+              "ExchangeOrgName": {
+                  "value": "[parameters('ExchangeOrgName')]"
+              },                                      
+              "NetBiosDomain": {
+                  "value": "[parameters('NetBiosDomain')]"
+              },
+              "dc1name": {
+                  "value": "[variables('dc1name')]"
+              },                            
+              "BaseDN": {
+                  "value": "[variables('BaseDN')]"
+              },                                                        
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },                                                                                                                                                                                                                                                                                                                                 
+              "location": {
+                  "value": "[resourceGroup().location]"
+              },          
+              "_artifactsLocation": {
+                "value": "[parameters('_artifactsLocation')]"
+              },                                                                                                            
+              "_artifactsLocationSasToken": {
+                "value": "[parameters('_artifactsLocationSasToken')]"
+              }                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+          }
+      }
+    },         
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-10-01",
       "name": "grantextrustedsub1",
@@ -2075,7 +2135,8 @@
         "DomainJoinFS1-22",        
         "DomainJoinFS1-19",        
         "DomainJoinFS1-16",                        
-        "prepareadexchange16"
+        "prepareadexchange16",
+        "prepareadexchange16-cu22"
       ],      
       "properties": {
           "mode": "Incremental",
@@ -2106,13 +2167,15 @@
       }
     },  
     {
+      "condition": "[equals(parameters('CU22'),'No')]",                  
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-10-01",
       "name": "installexchange1",
       "dependsOn": [
         "DomainJoinEX1",
         "prepareexchange16s1",
-        "prepareadexchange16"        
+        "prepareadexchange16",
+        "prepareadexchange16-cu22"     
       ],      
       "properties": {
           "mode": "Incremental",
@@ -2152,11 +2215,60 @@
       }
     }, 
     {
+      "condition": "[equals(parameters('CU22'),'Yes')]",                  
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "name": "installexchange1-cu22",
+      "dependsOn": [
+        "DomainJoinEX1",
+        "prepareexchange16s1",
+        "prepareadexchange16",
+        "prepareadexchange16-cu22"     
+      ],      
+      "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+              "uri": "[uri(parameters('_artifactsLocation'), concat('linkedtemplates/exchange1622.json', parameters('_artifactsLocationSasToken')))]",
+              "contentVersion": "1.0.0.0"
+          },
+          "parameters": {
+              "computerName": {
+                  "value": "[variables('ex1name')]"
+              },
+              "NetBiosDomain": {
+                  "value": "[parameters('NetBiosDomain')]"
+              },
+              "SetupDC": {
+                  "value": "[variables('dc1name')]"
+              },                                                      
+              "location": {
+                  "value": "[resourceGroup().location]"
+              },          
+              "DBName": {
+                  "value": "[variables('db1name')]"
+              },       
+              "adminUsername": {
+                "value": "[parameters('adminUsername')]"
+              },                                                                                                            
+              "adminPassword": {
+                "value": "[parameters('adminPassword')]"
+              },                                                                                                                                                                                                                                                                                                                                                      
+              "_artifactsLocation": {
+                "value": "[parameters('_artifactsLocation')]"
+              },                                                                                                            
+              "_artifactsLocationSasToken": {
+                "value": "[parameters('_artifactsLocationSasToken')]"
+              }                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+          }
+      }
+    },     
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-10-01",
       "name": "configexchange1",
       "dependsOn": [
-        "installexchange1"
+        "installexchange1",
+        "installexchange1-cu22"
       ],      
       "properties": {
           "mode": "Incremental",
