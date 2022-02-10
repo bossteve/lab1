@@ -478,49 +478,75 @@
     },            
     "DC1VMSize": {
         "type": "string",
-        "defaultValue": "Standard_D2s_v3",
+        "defaultValue": "Standard_B1ms",
         "metadata": {
             "description": "Domain Controller1 VMSize"
         }
     },        
     "RCAVMSize": {
         "type": "string",
-        "defaultValue": "Standard_D2s_v3",
+        "defaultValue": "Standard_B1ms",
         "metadata": {
             "description": "Offline Root CA VMSize"
         }
     },
     "ICAVMSize": {
         "type": "string",
-        "defaultValue": "Standard_D2s_v3",
+        "defaultValue": "Standard_B1ms",
+        "allowedValues": [
+          "Standard_B1ms",
+          "Standard_B2s",
+          "Standard_D2s_v3"
+        ],
         "metadata": {
             "description": "Issuing CA VMSize"
         }
     },            
     "OCSPVMSize": {
         "type": "string",
-        "defaultValue": "Standard_D2s_v3",
+        "defaultValue": "Standard_B1ms",
+        "allowedValues": [
+          "Standard_B1ms",
+          "Standard_B2s",
+          "Standard_D2s_v3"
+        ],
         "metadata": {
             "description": "OCSP VMSize"
         }
     },                           
     "FS1VMSize": {
         "type": "string",
-        "defaultValue": "Standard_D2s_v3",
+        "defaultValue": "Standard_B1ms",
+        "allowedValues": [
+          "Standard_B1ms",
+          "Standard_B2s",
+          "Standard_D2s_v3"
+        ],
         "metadata": {
             "description": "File Share Witeness Server1 VMSize"
         }
     },                        
     "EX1VMSize": {
         "type": "string",
-        "defaultValue": "Standard_D8s_v3",
+        "defaultValue": "Standard_D2s_v3",
+        "allowedValues": [
+          "Standard_B1ms",
+          "Standard_B2s",
+          "Standard_D2s_v3",
+          "Standard_D8s_v3"
+        ],
         "metadata": {
             "description": "Exchange Server1 VMSize"
         }
     },                                            
     "WK1VMSize": {
       "type": "string",
-      "defaultValue": "Standard_D2s_v3",
+      "defaultValue": "Standard_B1ms",
+      "allowedValues": [
+          "Standard_B1ms",
+          "Standard_B2s",
+          "Standard_D2s_v3"
+        ],
       "metadata": {
           "description": "Workstation1 VMSize"
       }
