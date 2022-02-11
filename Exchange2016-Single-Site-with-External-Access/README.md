@@ -2,10 +2,11 @@
 <img src="../x_Images/Exchange2016SingleSite.png" alt="Exchange 2016" width="150">
 Click a button below to deploy to the cloud of your choice
 
-[![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbossteve%2Flab1%2Fmain%2FExchange2016-Single-Site-with-External-Access%2Fazuredeploy.json)
+[![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Felliottfieldsjr%2FKillerHomeLab%2Fmaster%2FDeployments%2FExchange2016-Single-Site-with-External-Access%2Fazuredeploy.json)
 [![Deploy To Azure US Gov](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazuregov.svg?sanitize=true)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Felliottfieldsjr%2FKillerHomeLab%2Fmaster%2FDeployments%2FExchange2016-Single-Site-with-External-Access%2Fazuredeploy.json)
 
 !!!!NOTE:  PLEASE MAKE SURE TO APPLY CRITICAL SECURITY UPDATE KB5000871 TO BOTH EXCHANGE SERVERS AFTER THE DEPLOYMENT IS COMPLETE.
+!!!!NOTE:  THIS PARAMETER NOW HAS A NEW PARAMETER CALLED "CU22". THIS NEEDS TO BE SELECTED IF EXCHANGE 2016 CU22 IS BEING DEPLOYED.
 
 This Templates deploys a Single Forest/Domain:
 
@@ -88,6 +89,7 @@ Parameters that support changes
 - AutoShutdownTime.  24-Hour Clock Time for Auto-Shutdown (Example: 1900 = 7PM)
 - AutoShutdownEmail.  Auto-Shutdown notification Email (Example:  user@domain.com)
 - Exchange Org Name. Enter a name that will be used for your Exchange Organization Name.
+- CU22.  Select Yes if Exchange 2016 CU22 is being deployed.  A new License parameter has been introduced in CU22.
 - Exchange2016ISOUrl.  You must enter a URL or created SAS URL that points to an Exchange 2016 ISO for this installation to be successful.
 - Admin Username.  Enter a valid Admin Username
 - Admin Password.  Enter a valid Admin Password
